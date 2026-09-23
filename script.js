@@ -1,27 +1,31 @@
 /**
  * FRONTEND CONTROLLER - 1% Daily & Activity Tracker
+ * Format: 24 Jam (00:00 - 23:59)
  */
 
-// 1. Masukkan URL hasil deployment Apps Script Anda di sini
+// GANTI DENGAN URL WEB APP DARI GOOGLE APPS SCRIPT ANDA
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzFxgAWFu9oRa7bGOT4O-OIbCthT-iW34ogCnSpG_1s5qRDK_cN43Kyl7G7iX7e9F1O/exec";
 
-
 // Inisialisasi Tanggal Hari Ini (Format: YYYY-MM-DD)
-const todayStr = new Date().toISOString().split("T")[0];
+const now = new Date();
+const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
 document.addEventListener("DOMContentLoaded", () => {
-  // Atur nilai default date input
+  // Inisialisasi Dropdown Format 24 Jam
+  init24HourSelectors();
+
+  // Atur nilai default date input ke hari ini
   const filterDateInput = document.getElementById("filterDate");
   const inputDate = document.getElementById("inputDate");
   
   filterDateInput.value = todayStr;
   inputDate.value = todayStr;
 
-  // Muat Wawasan AI & Riwayat kegiatan hari ini
+  // Muat Wawasan AI & Riwayat kegiatan
   fetchAiInsight();
   loadActivities(todayStr);
 
-  // Pasang listener saat tanggal di header diubah
+  // Listener ganti tanggal di header
   filterDateInput.addEventListener("change", (e) => {
     const selectedDate = e.target.value;
     inputDate.value = selectedDate;
@@ -30,7 +34,38 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 /**
- * Mengambil Wawasan Mikro 1% dari Backend Apps Script (Gemini AI)
+ * Mengisi dropdown pilihan jam (00 - 23) dan menit (00 - 55 kelipatan 5)
+ */
+function init24HourSelectors() {
+  const hours = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, "0"));
+  const minutes = Array.from({ length: 12 }, (_, i) => String(i * 5).padStart(2, "0"));
+
+  const startHourEl = document.getElementById("startHour");
+  const endHourEl = document.getElementById("endHour");
+  const startMinuteEl = document.getElementById("startMinute");
+  const endMinuteEl = document.getElementById("endMinute");
+
+  startHourEl.innerHTML = hours.map(h => `<option value="${h}">${h}</option>`).join("");
+  endHourEl.innerHTML = hours.map(h => `<option value="${h}">${h}</option>`).join("");
+
+  startMinuteEl.innerHTML = minutes.map(m => `<option value="${m}">${m}</option>`).join("");
+  endMinuteEl.innerHTML = minutes.map(m => `<option value="${m}">${m}</option>`).join("");
+
+  // Set nilai default jam ke jam saat ini
+  const currentHour = String(now.getHours()).padStart(2, "0");
+  const currentMinRounded = String(Math.floor(now.getMinutes() / 5) * 5).padStart(2, "0");
+  
+  startHourEl.value = currentHour;
+  startMinuteEl.value = currentMinRounded;
+  
+  // Set jam selesai default 1 jam setelahnya
+  const nextHour = String((now.getHours() + 1) % 24).padStart(2, "0");
+  endHourEl.value = nextHour;
+  endMinuteEl.value = currentMinRounded;
+}
+
+/**
+ * Mengambil Wawasan Mikro 1% dari Apps Script (Gemini AI)
  */
 async function fetchAiInsight() {
   const badge = document.getElementById("aiCategoryBadge");
@@ -39,7 +74,7 @@ async function fetchAiInsight() {
   const btnRefresh = document.getElementById("btnRefreshAi");
 
   badge.innerText = "Memuat...";
-  insightText.innerText = "Gemini sedang merumuskan prinsip 1% untuk hari ini...";
+  insightText.innerText = "Gemini sedang merumuskan wawasan mikro 1% untuk hari ini...";
   actionText.innerText = "...";
   btnRefresh.disabled = true;
 
@@ -52,20 +87,20 @@ async function fetchAiInsight() {
       insightText.innerText = `"${result.insight.insight}"`;
       actionText.innerText = result.insight.action;
     } else {
-      throw new Error("Gagal mengurai respons AI.");
+      throw new Error("Format respons tidak valid.");
     }
   } catch (err) {
-    // Fallback lokal jika ada kendala koneksi
-    badge.innerText = "Kebugaran & Recovery";
-    insightText.innerText = '"Bukan seberapa keras Anda berlatih hari ini, melainkan seberapa konsisten Anda hadir setiap hari."';
-    actionText.innerText = "Lakukan 10 kali squat atau jalan santai 3 menit.";
+    // Fallback jika API sedang limit atau ada kendala koneksi
+    badge.innerText = "Kebugaran Fisik";
+    insightText.innerText = '"Konsistensi 2 menit jauh lebih bermakna daripada 1 jam latihan yang ditunda."';
+    actionText.innerText = "Lakukan 10 push-up atau peregangan leher dan punggung sekarang.";
   } finally {
     btnRefresh.disabled = false;
   }
 }
 
 /**
- * Mengambil Daftar Aktivitas dari Google Sheets Berdasarkan Tanggal
+ * Mengambil Riwayat Kegiatan Berdasarkan Tanggal dari Google Sheets
  */
 async function loadActivities(dateStr) {
   const container = document.getElementById("timelineContainer");
@@ -89,7 +124,7 @@ async function loadActivities(dateStr) {
       
       result.data.forEach((item) => {
         const itemCard = document.createElement("div");
-        itemCard.className = "p-3.5 rounded-xl border border-slate-200/80 bg-slate-50/70 hover:bg-slate-50 transition flex items-start justify-between gap-3";
+        itemCard.className = "p-4 rounded-xl border border-slate-200/80 bg-slate-50/70 hover:bg-slate-50 transition flex items-start justify-between gap-3";
         
         itemCard.innerHTML = `
           <div class="space-y-1.5 w-full">
@@ -97,12 +132,12 @@ async function loadActivities(dateStr) {
               <span class="text-xs font-bold text-slate-800 bg-white px-2 py-0.5 rounded border border-slate-200 shadow-2xs">
                 ⏰ ${item.startTime} - ${item.endTime}
               </span>
-              <span class="text-xs font-medium text-slate-600 bg-slate-200/70 px-2 py-0.5 rounded">
+              <span class="text-xs font-semibold text-blue-700 bg-blue-100/70 px-2 py-0.5 rounded">
                 ${item.category}
               </span>
             </div>
             <h3 class="text-sm font-semibold text-slate-900">${escapeHtml(item.activity)}</h3>
-            ${item.notes && item.notes !== "-" ? `<p class="text-xs text-slate-500 italic bg-white/60 p-2 rounded border border-slate-100">${escapeHtml(item.notes)}</p>` : ""}
+            ${item.notes && item.notes !== "-" ? `<p class="text-xs text-slate-600 bg-white p-2 rounded border border-slate-100 italic">${escapeHtml(item.notes)}</p>` : ""}
           </div>
         `;
         container.appendChild(itemCard);
@@ -115,7 +150,7 @@ async function loadActivities(dateStr) {
   } catch (err) {
     loading.classList.add("hidden");
     emptyState.classList.remove("hidden");
-    emptyState.innerHTML = `<p class="text-xs text-rose-500 font-medium">Gagal memuat aktivitas. Pastikan URL Apps Script sudah di-deploy dengan akses 'Anyone'.</p>`;
+    emptyState.innerHTML = `<p class="text-xs text-rose-500 font-medium">Gagal mengambil data kegiatan. Pastikan URL Apps Script sudah benar dan hak akses telah disetel ke 'Anyone'.</p>`;
   }
 }
 
@@ -128,10 +163,14 @@ async function handleFormSubmit(event) {
   const btn = document.getElementById("btnSubmitActivity");
   const alertBox = document.getElementById("formAlert");
 
+  // Ambil nilai jam 24 jam dari dropdown
+  const startTime = `${document.getElementById("startHour").value}:${document.getElementById("startMinute").value}`;
+  const endTime = `${document.getElementById("endHour").value}:${document.getElementById("endMinute").value}`;
+
   const formData = {
     date: document.getElementById("inputDate").value,
-    startTime: document.getElementById("inputStartTime").value,
-    endTime: document.getElementById("inputEndTime").value,
+    startTime: startTime,
+    endTime: endTime,
     category: document.getElementById("inputCategory").value,
     activity: document.getElementById("inputActivity").value,
     notes: document.getElementById("inputNotes").value
@@ -139,10 +178,10 @@ async function handleFormSubmit(event) {
 
   btn.disabled = true;
   btn.innerText = "Menyimpan ke Sheets...";
-  alertBox.className = "hidden text-xs text-center p-2 rounded-lg font-medium";
+  alertBox.className = "hidden text-xs text-center p-2.5 rounded-lg font-medium";
 
   try {
-    // Menggunakan text/plain POST payload untuk menghindari pre-flight CORS block di Apps Script
+    // Menggunakan POST payload JSON string
     const response = await fetch(APPS_SCRIPT_URL, {
       method: "POST",
       body: JSON.stringify({
@@ -154,24 +193,24 @@ async function handleFormSubmit(event) {
     const result = await response.json();
 
     if (result.status === "success") {
-      alertBox.innerText = "Aktivitas berhasil dicatat! ✓";
-      alertBox.className = "text-xs text-center p-2 rounded-lg font-medium bg-emerald-50 text-emerald-700 block border border-emerald-200";
+      alertBox.innerText = "Aktivitas berhasil disimpan! ✓";
+      alertBox.className = "text-xs text-center p-2.5 rounded-lg font-medium bg-emerald-50 text-emerald-700 block border border-emerald-200";
 
-      // Reset form isian nama dan catatan
+      // Bersihkan teks form
       document.getElementById("inputActivity").value = "";
       document.getElementById("inputNotes").value = "";
 
-      // Jika tanggal formulir sama dengan tanggal yang sedang dilihat, refresh timeline
+      // Jika tanggal formulir sama dengan tanggal yang sedang dilihat, refresh riwayat
       const activeFilterDate = document.getElementById("filterDate").value;
       if (formData.date === activeFilterDate) {
         loadActivities(activeFilterDate);
       }
     } else {
-      throw new Error(result.message || "Terjadi kesalahan.");
+      throw new Error(result.message || "Gagal menyimpan.");
     }
   } catch (err) {
-    alertBox.innerText = "Gagal menyimpan: " + err.message;
-    alertBox.className = "text-xs text-center p-2 rounded-lg font-medium bg-rose-50 text-rose-700 block border border-rose-200";
+    alertBox.innerText = "Error: " + err.message;
+    alertBox.className = "text-xs text-center p-2.5 rounded-lg font-medium bg-rose-50 text-rose-700 block border border-rose-200";
   } finally {
     btn.disabled = false;
     btn.innerText = "Simpan ke Spreadsheet";
@@ -181,11 +220,11 @@ async function handleFormSubmit(event) {
   }
 }
 
-// Format tanggal ke Bahasa Indonesia (Contoh: 23 September 2026)
+// Helper: Format Tanggal Bahasa Indonesia
 function formatDateIndo(dateString) {
   if (!dateString) return "";
-  const parts = dateString.split("-");
-  const d = new Date(parts[0], parts[1] - 1, parts[2]);
+  const [year, month, day] = dateString.split("-");
+  const d = new Date(year, month - 1, day);
   return d.toLocaleDateString("id-ID", {
     weekday: "long",
     day: "numeric",
@@ -194,7 +233,7 @@ function formatDateIndo(dateString) {
   });
 }
 
-// Sanitasi teks untuk mencegah XSS
+// Helper: Sanitasi karakter HTML
 function escapeHtml(text) {
   if (!text) return "";
   return text
