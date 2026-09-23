@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>1% Compass & Daily Tracker</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Font Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+  </style>
+</head>
+<body class="bg-slate-100 min-h-screen text-slate-800 p-4 md:p-8">
+
+  <div class="max-w-5xl mx-auto space-y-6">
+    
+    <!-- Top Header -->
+    <header class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-200 gap-3">
+      <div>
+        <h1 class="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
+          <span>⚡</span> 1% Daily Compass
+        </h1>
+        <p class="text-sm text-slate-500">Membangun kebiasaan dan melacak alur waktu harian Anda.</p>
+      </div>
+      <!-- Tanggal Terpilih Global -->
+      <div class="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-sm">
+        <label for="filterDate" class="text-xs font-semibold text-slate-500">Pilih Hari:</label>
+        <input type="date" id="filterDate" class="text-sm font-semibold text-slate-800 outline-none cursor-pointer bg-transparent">
+      </div>
+    </header>
+
+    <!-- AI 1% Insight Card -->
+    <section class="bg-slate-900 text-white rounded-2xl p-6 shadow-md border border-slate-800 relative">
+      <div class="flex items-center justify-between mb-3">
+        <span id="aiCategoryBadge" class="px-3 py-1 text-xs font-semibold uppercase tracking-wider bg-blue-500/20 text-blue-300 border border-blue-400/30 rounded-full">
+          Memuat Wawasan...
+        </span>
+        <button onclick="fetchAiInsight()" id="btnRefreshAi" class="text-xs text-slate-400 hover:text-white transition flex items-center gap-1">
+          🔄 Segarkan AI
+        </button>
+      </div>
+
+      <p id="aiInsightText" class="text-base md:text-lg font-medium text-slate-100 leading-relaxed mb-4">
+        "Mengambil wawasan harian dari Gemini AI..."
+      </p>
+
+      <div class="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/10 flex items-start gap-3">
+        <span class="text-emerald-400 text-xl">🎯</span>
+        <div>
+          <span class="text-xs uppercase tracking-wider text-emerald-300 font-bold block">Tindakan Mikro (1% Action) Hari Ini</span>
+          <p id="aiActionText" class="text-sm text-slate-200 mt-0.5">-</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Grid: Form Input & Riwayat Kegiatan -->
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
+      
+      <!-- Formulir Input Kegiatan -->
+      <section class="md:col-span-5 bg-white p-5 md:p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+        <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
+          <span>✍️</span> Catat Kegiatan Baru
+        </h2>
+
+        <form id="activityForm" onsubmit="handleFormSubmit(event)" class="space-y-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Tanggal Kegiatan</label>
+            <input type="date" id="inputDate" required class="w-full border border-slate-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Jam Mulai</label>
+              <input type="time" id="inputStartTime" required class="w-full border border-slate-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Jam Selesai</label>
+              <input type="time" id="inputEndTime" required class="w-full border border-slate-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Kategori</label>
+            <select id="inputCategory" class="w-full border border-slate-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white">
+              <option value="🏋️ Olahraga & Fisik">🏋️ Olahraga & Fisik</option>
+              <option value="📚 Belajar & Membaca">📚 Belajar & Membaca</option>
+              <option value="💻 Pekerjaan & Coding">💻 Pekerjaan & Coding</option>
+              <option value="🧘 Ibadah & Meditasi">🧘 Ibadah & Meditasi</option>
+              <option value="☕ Recovery & Istirahat">☕ Recovery & Istirahat</option>
+              <option value="📌 Lain-lain">📌 Lain-lain</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Nama Kegiatan</label>
+            <input type="text" id="inputActivity" required placeholder="Contoh: Jogging pagi & pull-up" class="w-full border border-slate-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Catatan / Refleksi (Opsional)</label>
+            <textarea id="inputNotes" rows="2" placeholder="Contoh: Denyut nadi stabil, peregangan 5 menit setelah selesai." class="w-full border border-slate-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none"></textarea>
+          </div>
+
+          <button type="submit" id="btnSubmitActivity" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-lg text-sm transition shadow-sm">
+            Simpan ke Spreadsheet
+          </button>
+          
+          <div id="formAlert" class="hidden text-xs text-center p-2 rounded-lg font-medium"></div>
+        </form>
+      </section>
+
+      <!-- Riwayat Timeline Aktivitas -->
+      <section class="md:col-span-7 bg-white p-5 md:p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+          <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
+            <span>📋</span> Riwayat Aktivitas
+          </h2>
+          <span id="selectedDateLabel" class="text-xs font-semibold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full"></span>
+        </div>
+
+        <!-- Indikator Loading -->
+        <div id="timelineLoading" class="text-center py-12 text-sm text-slate-400">
+          <div class="animate-spin inline-block w-6 h-6 border-2 border-current border-t-transparent text-blue-600 rounded-full mb-2"></div>
+          <p>Memuat aktivitas dari Google Sheets...</p>
+        </div>
+
+        <!-- Daftar Kegiatan -->
+        <div id="timelineContainer" class="space-y-3 hidden"></div>
+
+        <!-- Status Kosong -->
+        <div id="timelineEmpty" class="text-center py-12 text-slate-400 hidden">
+          <p class="text-3xl mb-1">🍃</p>
+          <p class="text-sm font-medium">Belum ada kegiatan yang tercatat untuk tanggal ini.</p>
+          <p class="text-xs mt-1">Gunakan formulir di samping untuk menambahkan aktivitas pertama Anda.</p>
+        </div>
+      </section>
+
+    </div>
+
+  </div>
+
+  <!-- Hubungkan ke file JavaScript -->
+  <script src="script.js"></script>
+</body>
+</html>
