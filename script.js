@@ -3,7 +3,7 @@
  */
 
 // 1. Masukkan URL hasil deployment Apps Script Anda di sini
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxGKHeu5UNdJxKIHgikyHLoy08BsGs9U_f3-1ORtb8rIL9iZF3oeT4f9q1cRle19hIWow/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzFxgAWFu9oRa7bGOT4O-OIbCthT-iW34ogCnSpG_1s5qRDK_cN43Kyl7G7iX7e9F1O/exec";
 
 // Inisialisasi Tanggal Hari Ini (Format: YYYY-MM-DD)
 const todayStr = new Date().toISOString().split("T")[0];
