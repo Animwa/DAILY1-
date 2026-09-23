@@ -5,6 +5,7 @@
 // 1. Masukkan URL hasil deployment Apps Script Anda di sini
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzFxgAWFu9oRa7bGOT4O-OIbCthT-iW34ogCnSpG_1s5qRDK_cN43Kyl7G7iX7e9F1O/exec";
 
+
 // Inisialisasi Tanggal Hari Ini (Format: YYYY-MM-DD)
 const todayStr = new Date().toISOString().split("T")[0];
 
