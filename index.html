@@ -3,26 +3,18 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>1% Daily Compass & Activity Tracker</title>
-  <!-- Tailwind CSS CDN -->
+  <title>1% Compass & Weekly Activity Tracker</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Google Fonts: Plus Jakarta Sans -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     body { font-family: 'Plus Jakarta Sans', sans-serif; }
-    /* Menghilangkan panah spinner default di input number */
-    input[type=number]::-webkit-inner-spin-button, 
-    input[type=number]::-webkit-outer-spin-button { 
-      -webkit-appearance: none; 
-      margin: 0; 
-    }
   </style>
 </head>
 <body class="bg-slate-100 min-h-screen text-slate-800 p-4 md:p-8">
 
-  <div class="max-w-5xl mx-auto space-y-6">
+  <div class="max-w-6xl mx-auto space-y-6">
     
     <!-- Top Header -->
     <header class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-200 gap-3">
@@ -30,12 +22,12 @@
         <h1 class="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
           <span>⚡</span> 1% Daily Compass
         </h1>
-        <p class="text-sm text-slate-500">Membangun kebiasaan dan melacak riwayat kegiatan harian.</p>
+        <p class="text-sm text-slate-500">Membangun kebiasaan 1% dan melacak produktivitas mingguan.</p>
       </div>
-      <!-- Tanggal Terpilih Global -->
-      <div class="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-sm">
-        <label for="filterDate" class="text-xs font-semibold text-slate-500">Pilih Tanggal:</label>
-        <input type="date" id="filterDate" class="text-sm font-semibold text-slate-800 outline-none cursor-pointer bg-transparent">
+      <div class="flex items-center gap-2">
+        <button onclick="loadWeeklyActivities()" class="bg-white border border-slate-200 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-50 transition shadow-xs flex items-center gap-1.5 cursor-pointer">
+          🔄 Segarkan Riwayat
+        </button>
       </div>
     </header>
 
@@ -46,7 +38,7 @@
           Memuat Wawasan...
         </span>
         <button onclick="fetchAiInsight()" id="btnRefreshAi" class="text-xs text-slate-400 hover:text-white transition flex items-center gap-1 cursor-pointer">
-          🔄 Segarkan AI
+          🔄 Generate Wawasan Baru
         </button>
       </div>
 
@@ -63,113 +55,165 @@
       </div>
     </section>
 
-    <!-- Grid: Form Input & Riwayat Kegiatan -->
-    <div class="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
+    <!-- Grid: Form Input Baru & Riwayat Mingguan -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
       
-      <!-- Formulir Input Kegiatan -->
-      <section class="md:col-span-5 bg-white p-5 md:p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+      <!-- Formulir Tambah Kegiatan Baru (Create) -->
+      <section class="lg:col-span-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4 sticky top-6">
         <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
-          <span>✍️</span> Catat Kegiatan Baru
+          <span>✍️</span> Tambah Aktivitas
         </h2>
 
-        <form id="activityForm" onsubmit="handleFormSubmit(event)" class="space-y-4">
+        <form id="activityForm" onsubmit="handleFormSubmit(event)" class="space-y-3.5">
           <div>
             <label class="block text-xs font-semibold text-slate-600 mb-1">Tanggal</label>
-            <input type="date" id="inputDate" required class="w-full border border-slate-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+            <input type="date" id="inputDate" required class="w-full border border-slate-200 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
           </div>
 
-          <!-- Bagian Format 24 Jam (Jam:Menit) -->
-          <div class="grid grid-cols-2 gap-3">
-            <!-- Jam Mulai -->
+          <!-- Format 24 Jam -->
+          <div class="grid grid-cols-2 gap-2.5">
             <div>
-              <label class="block text-xs font-semibold text-slate-600 mb-1">Jam Mulai (24 Jam)</label>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Jam Mulai</label>
               <div class="flex items-center gap-1">
-                <select id="startHour" class="w-1/2 border border-slate-200 rounded-lg p-2 text-sm text-center font-medium bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none">
-                  <!-- Diisi otomatis oleh script.js (00 - 23) -->
-                </select>
+                <select id="startHour" class="w-1/2 border border-slate-200 rounded-lg p-2 text-xs font-medium bg-slate-50 focus:bg-white outline-none"></select>
                 <span class="font-bold text-slate-400">:</span>
-                <select id="startMinute" class="w-1/2 border border-slate-200 rounded-lg p-2 text-sm text-center font-medium bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none">
-                  <!-- Diisi otomatis oleh script.js (00 - 55 kelipatan 5) -->
-                </select>
+                <select id="startMinute" class="w-1/2 border border-slate-200 rounded-lg p-2 text-xs font-medium bg-slate-50 focus:bg-white outline-none"></select>
               </div>
             </div>
-
-            <!-- Jam Selesai -->
             <div>
-              <label class="block text-xs font-semibold text-slate-600 mb-1">Jam Selesai (24 Jam)</label>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Jam Selesai</label>
               <div class="flex items-center gap-1">
-                <select id="endHour" class="w-1/2 border border-slate-200 rounded-lg p-2 text-sm text-center font-medium bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none">
-                  <!-- Diisi otomatis oleh script.js (00 - 23) -->
-                </select>
+                <select id="endHour" class="w-1/2 border border-slate-200 rounded-lg p-2 text-xs font-medium bg-slate-50 focus:bg-white outline-none"></select>
                 <span class="font-bold text-slate-400">:</span>
-                <select id="endMinute" class="w-1/2 border border-slate-200 rounded-lg p-2 text-sm text-center font-medium bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none">
-                  <!-- Diisi otomatis oleh script.js (00 - 55 kelipatan 5) -->
-                </select>
+                <select id="endMinute" class="w-1/2 border border-slate-200 rounded-lg p-2 text-xs font-medium bg-slate-50 focus:bg-white outline-none"></select>
               </div>
             </div>
           </div>
 
           <div>
             <label class="block text-xs font-semibold text-slate-600 mb-1">Kategori</label>
-            <select id="inputCategory" class="w-full border border-slate-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white font-medium">
+            <select id="inputCategory" class="w-full border border-slate-200 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white">
               <option value="🏋️ Olahraga & Fisik">🏋️ Olahraga & Fisik</option>
-              <option value="📚 Belajar & Membaca">📚 Belajar & Membaca</option>
+              <option value="📚 Belajar & Riset">📚 Belajar & Riset</option>
               <option value="💻 Pekerjaan & Coding">💻 Pekerjaan & Coding</option>
-              <option value="🧘 Ibadah & Meditasi">🧘 Ibadah & Meditasi</option>
-              <option value="☕ Recovery & Istirahat">☕ Recovery & Istirahat</option>
+              <option value="🧘 Ibadah & Mindset">🧘 Ibadah & Mindset</option>
+              <option value="☕ Istirahat & Recovery">☕ Istirahat & Recovery</option>
               <option value="📌 Lain-lain">📌 Lain-lain</option>
             </select>
           </div>
 
           <div>
             <label class="block text-xs font-semibold text-slate-600 mb-1">Nama Kegiatan</label>
-            <input type="text" id="inputActivity" required placeholder="Contoh: Push-up 3 set & treadmill" class="w-full border border-slate-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+            <input type="text" id="inputActivity" required placeholder="Contoh: Push-up 3 set & treadmill" class="w-full border border-slate-200 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
           </div>
 
           <div>
-            <label class="block text-xs font-semibold text-slate-600 mb-1">Catatan / Refleksi (Opsional)</label>
-            <textarea id="inputNotes" rows="2" placeholder="Contoh: Denyut nadi stabil, peregangan 5 menit." class="w-full border border-slate-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none"></textarea>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Catatan / Refleksi</label>
+            <textarea id="inputNotes" rows="2" placeholder="Contoh: Form push up lebih rapi, tempo lambat." class="w-full border border-slate-200 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"></textarea>
           </div>
 
           <button type="submit" id="btnSubmitActivity" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-lg text-sm transition shadow-sm cursor-pointer">
-            Simpan ke Spreadsheet
+            + Simpan Kegiatan
           </button>
           
-          <div id="formAlert" class="hidden text-xs text-center p-2.5 rounded-lg font-medium"></div>
+          <div id="formAlert" class="hidden text-xs text-center p-2 rounded-lg font-medium"></div>
         </form>
       </section>
 
-      <!-- Riwayat Timeline Aktivitas -->
-      <section class="md:col-span-7 bg-white p-5 md:p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+      <!-- Riwayat Tertata Per Hari (Read 7 Hari Terakhir) -->
+      <section class="lg:col-span-8 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
         <div class="flex items-center justify-between border-b border-slate-100 pb-3">
-          <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
-            <span>📋</span> Riwayat Aktivitas
-          </h2>
-          <span id="selectedDateLabel" class="text-xs font-semibold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full"></span>
+          <div>
+            <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
+              <span>📅</span> Riwayat 7 Hari Terakhir
+            </h2>
+            <p id="weekDateRangeLabel" class="text-xs text-slate-400 mt-0.5">Memuat rentang tanggal...</p>
+          </div>
         </div>
 
         <!-- Indikator Loading -->
-        <div id="timelineLoading" class="text-center py-12 text-sm text-slate-400">
+        <div id="weeklyLoading" class="text-center py-14 text-sm text-slate-400">
           <div class="animate-spin inline-block w-6 h-6 border-2 border-current border-t-transparent text-blue-600 rounded-full mb-2"></div>
-          <p>Memuat aktivitas dari Google Sheets...</p>
+          <p>Memuat data 7 hari terakhir dari Google Sheets...</p>
         </div>
 
-        <!-- Daftar Kegiatan -->
-        <div id="timelineContainer" class="space-y-3 hidden"></div>
-
-        <!-- Status Kosong -->
-        <div id="timelineEmpty" class="text-center py-12 text-slate-400 hidden">
-          <p class="text-3xl mb-1">🍃</p>
-          <p class="text-sm font-medium">Belum ada kegiatan yang tercatat untuk tanggal ini.</p>
-          <p class="text-xs mt-1">Gunakan formulir di samping untuk menambahkan aktivitas pertama Anda.</p>
-        </div>
+        <!-- Kontainer Akordeon / Kartu Harian -->
+        <div id="weeklyContainer" class="space-y-5 hidden"></div>
       </section>
 
     </div>
 
   </div>
 
-  <!-- Memuat Script Kontrol -->
+  <!-- Modal Dialog Edit Aktivitas (Update) -->
+  <div id="editModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 z-50 hidden">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4 border border-slate-100">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <h3 class="font-bold text-slate-900 text-base">✏️ Edit Aktivitas</h3>
+        <button onclick="closeEditModal()" class="text-slate-400 hover:text-slate-600 text-lg cursor-pointer">✕</button>
+      </div>
+
+      <form id="editForm" onsubmit="handleEditSubmit(event)" class="space-y-3">
+        <input type="hidden" id="editId">
+        
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Tanggal</label>
+          <input type="date" id="editDate" required class="w-full border border-slate-200 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+        </div>
+
+        <div class="grid grid-cols-2 gap-2.5">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Jam Mulai</label>
+            <div class="flex items-center gap-1">
+              <select id="editStartHour" class="w-1/2 border border-slate-200 rounded-lg p-2 text-xs font-medium outline-none"></select>
+              <span class="font-bold text-slate-400">:</span>
+              <select id="editStartMinute" class="w-1/2 border border-slate-200 rounded-lg p-2 text-xs font-medium outline-none"></select>
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Jam Selesai</label>
+            <div class="flex items-center gap-1">
+              <select id="editEndHour" class="w-1/2 border border-slate-200 rounded-lg p-2 text-xs font-medium outline-none"></select>
+              <span class="font-bold text-slate-400">:</span>
+              <select id="editEndMinute" class="w-1/2 border border-slate-200 rounded-lg p-2 text-xs font-medium outline-none"></select>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Kategori</label>
+          <select id="editCategory" class="w-full border border-slate-200 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white">
+            <option value="🏋️ Olahraga & Fisik">🏋️ Olahraga & Fisik</option>
+            <option value="📚 Belajar & Riset">📚 Belajar & Riset</option>
+            <option value="💻 Pekerjaan & Coding">💻 Pekerjaan & Coding</option>
+            <option value="🧘 Ibadah & Mindset">🧘 Ibadah & Mindset</option>
+            <option value="☕ Istirahat & Recovery">☕ Istirahat & Recovery</option>
+            <option value="📌 Lain-lain">📌 Lain-lain</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Nama Kegiatan</label>
+          <input type="text" id="editActivity" required class="w-full border border-slate-200 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Catatan</label>
+          <textarea id="editNotes" rows="2" class="w-full border border-slate-200 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"></textarea>
+        </div>
+
+        <div class="flex items-center gap-2 pt-2">
+          <button type="button" onclick="closeEditModal()" class="w-1/2 py-2 text-xs font-semibold text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 cursor-pointer">
+            Batal
+          </button>
+          <button type="submit" id="btnSaveEdit" class="w-1/2 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg cursor-pointer">
+            Simpan Perubahan
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <script src="script.js"></script>
 </body>
 </html>
