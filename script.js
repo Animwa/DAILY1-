@@ -409,7 +409,7 @@ async function handleDeleteTarget(id) {
 }
 
 // ==========================================
-// HELPERS (Format Tanggal & Nama Hari Otomatis)
+// HELPERS (Format Tanggal & Nama Hari Otomatis Bahasa Indonesia)
 // ==========================================
 
 function formatDateToISO(date) {
@@ -420,43 +420,51 @@ function formatDateFullIndo(dateStr) {
   if (!dateStr) return "";
   let cleanStr = String(dateStr).trim();
   
+  const days = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
+  const months = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+
   if (cleanStr.includes("/")) {
-    const d = new Date(cleanStr);
-    if (!isNaN(d.getTime())) {
-      return d.toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
-    }
-  }
-  
-  if (cleanStr.includes("-")) {
-    const [y, m, d] = cleanStr.split("-");
-    const dateObj = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
+    const dateObj = new Date(cleanStr);
     if (!isNaN(dateObj.getTime())) {
-      return dateObj.toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+      return `${days[dateObj.getDay()]}, ${dateObj.getDate()} ${months[dateObj.getMonth()]} ${dateObj.getFullYear()}`;
+    }
+  } else if (cleanStr.includes("-")) {
+    const parts = cleanStr.split("-");
+    if (parts.length === 3) {
+      let y = parseInt(parts[0]);
+      let m = parseInt(parts[1]) - 1;
+      let d = parseInt(parts[2]);
+      const dateObj = new Date(y, m, d);
+      if (!isNaN(dateObj.getTime())) {
+        return `${days[dateObj.getDay()]}, ${d} ${months[m]} ${y}`;
+      }
     }
   }
-  
   return cleanStr;
 }
 
 function formatDateShortIndo(dateStr) {
   if (!dateStr) return "";
   let cleanStr = String(dateStr).trim();
+  const months = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Ags", "Sep", "Okt", "Nov", "Des"];
 
   if (cleanStr.includes("/")) {
     const d = new Date(cleanStr);
     if (!isNaN(d.getTime())) {
-      return d.toLocaleDateString("id-ID", { day: "numeric", month: "short" });
+      return `${d.getDate()} ${months[d.getMonth()]}`;
+    }
+  } else if (cleanStr.includes("-")) {
+    const parts = cleanStr.split("-");
+    if (parts.length === 3) {
+      let y = parseInt(parts[0]);
+      let m = parseInt(parts[1]) - 1;
+      let d = parseInt(parts[2]);
+      const dateObj = new Date(y, m, d);
+      if (!isNaN(dateObj.getTime())) {
+        return `${d} ${months[m]}`;
+      }
     }
   }
-
-  if (cleanStr.includes("-")) {
-    const [y, m, d] = cleanStr.split("-");
-    const dateObj = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
-    if (!isNaN(dateObj.getTime())) {
-      return dateObj.toLocaleDateString("id-ID", { day: "numeric", month: "short" });
-    }
-  }
-
   return cleanStr;
 }
 
