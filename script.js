@@ -3,7 +3,7 @@
  */
 
 // URL DEPLOYMENT APPS SCRIPT ANDA
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxb8TzIqmAXrY9GDlxd2f67Y_NjHi0NLclEvuPyz1riDZ73BUHVZwT43SAt0yvdAvq_kA/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwdvwSYLSKtyxoqN8keMkgxKw3hHsFlHo-pFxFyBLZPmtz_s5ZHZdl5eHpLM1xTWOnHJw/exec";
 
 let activeTab = "activities";
 let currentDailyActivities = [];
