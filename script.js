@@ -2,8 +2,8 @@
  * FRONTEND CONTROLLER - Daily Activity Tracker Dashboard
  */
 
-// URL DEPLOYMENT GOOGLE APPS SCRIPT
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw1cKfDTdBx36rlvpBoJBFkzncLfZqaMMopaA6WDDg93ovjieUKv3oU0tLDNUQklnvxmw/exec";
+// GANTI DENGAN URL DEPLOYMENT GOOGLE APPS SCRIPT ANDA
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyBU1WuKsHjYgyoGbdq3pdsEF_BFn5XG2-ZSCw27tzkcQXQHJjSuyiKWamx_vW4hiRd4g/exec";
 
 let currentDailyActivities = [];
 
@@ -96,7 +96,7 @@ function renderDailyList(activities) {
   if (activities.length === 0) {
     container.innerHTML = `
       <div class="text-center py-12 border border-dashed border-slate-200 rounded-xl">
-        <p class="text-slate-400 text-sm font-medium">Belum ada aktivitas yang dicatat untuk hari ini.</p>
+        <p class="text-slate-400 text-sm font-medium">Belum ada aktivitas yang dicatat untuk tanggal ini.</p>
         <p class="text-slate-400 text-xs mt-1">Gunakan formulir di sebelah kiri untuk menambah kegiatan.</p>
       </div>
     `;
@@ -177,7 +177,7 @@ async function handleFormSubmit(event) {
       document.getElementById("inputActivity").value = "";
       document.getElementById("inputNotes").value = "";
 
-      // Samakan filter tanggal dashboard dengan tanggal input
+      // Otomatis arahkan filter dashboard ke tanggal kegiatan yang baru disimpan
       document.getElementById("dashboardFilterDate").value = inputDateVal;
       loadDailyActivities();
     } else {
