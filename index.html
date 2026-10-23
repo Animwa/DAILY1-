@@ -149,13 +149,17 @@
           <div class="p-3 bg-emerald-600/30 border border-emerald-500/30 rounded-xl text-xl">🎯</div>
           <div>
             <h2 class="text-lg font-bold text-white">Target & Sasaran Anda</h2>
-            <p class="text-xs text-slate-400">Catat target yang ingin dicapai dan kelola status penyelesaiannya.</p>
+            <p class="text-xs text-slate-400">Kelola target aktif dan riwayat target yang telah selesai.</p>
           </div>
         </div>
-        <div class="flex items-center gap-4">
+        <div class="flex items-center gap-6">
           <div class="text-right">
-            <span class="text-xs text-slate-400 block">Total Target</span>
-            <span id="statTotalTargets" class="text-xl font-bold text-emerald-400">0</span>
+            <span class="text-xs text-slate-400 block">Aktif</span>
+            <span id="statActiveTargets" class="text-xl font-bold text-amber-400">0</span>
+          </div>
+          <div class="text-right">
+            <span class="text-xs text-slate-400 block">Selesai</span>
+            <span id="statCompletedTargets" class="text-xl font-bold text-emerald-400">0</span>
           </div>
         </div>
       </section>
@@ -188,20 +192,36 @@
           </form>
         </section>
 
-        <!-- List Target -->
-        <section class="lg:col-span-8 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-          <div class="border-b border-slate-100 pb-3">
-            <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
-              <span>🚩</span> Daftar Target Ditentukan (Urut Tanggal Terdekat)
-            </h2>
-          </div>
-
-          <div id="targetLoading" class="text-center py-14 text-sm text-slate-400">
+        <!-- Container List Target (Terpisah: Belum & Sudah) -->
+        <section class="lg:col-span-8 space-y-6">
+          
+          <div id="targetLoading" class="bg-white p-5 rounded-2xl border border-slate-200 text-center py-14 text-sm text-slate-400">
             <div class="animate-spin inline-block w-6 h-6 border-2 border-current border-t-transparent text-emerald-600 rounded-full mb-2"></div>
             <p>Memuat daftar target...</p>
           </div>
 
-          <div id="targetContainer" class="space-y-3 hidden"></div>
+          <!-- Section 1: Target Belum Dilaksanakan -->
+          <div id="activeTargetSection" class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4 hidden">
+            <div class="border-b border-slate-100 pb-3 flex items-center justify-between">
+              <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                <span>⏳</span> Target Belum Dilaksanakan
+              </h2>
+              <span id="badgeActiveCount" class="bg-amber-100 text-amber-800 text-xs font-bold px-2.5 py-0.5 rounded-full">0</span>
+            </div>
+            <div id="activeTargetContainer" class="space-y-3"></div>
+          </div>
+
+          <!-- Section 2: Target Sudah Dilaksanakan (Dikelompokkan Per Bulan) -->
+          <div id="completedTargetSection" class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4 hidden">
+            <div class="border-b border-slate-100 pb-3 flex items-center justify-between">
+              <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                <span>✅</span> Riwayat Target Terlaksana (Per Bulan)
+              </h2>
+              <span id="badgeCompletedCount" class="bg-emerald-100 text-emerald-800 text-xs font-bold px-2.5 py-0.5 rounded-full">0</span>
+            </div>
+            <div id="completedTargetContainer" class="space-y-6"></div>
+          </div>
+
         </section>
 
       </div>
