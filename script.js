@@ -3,7 +3,7 @@
  */
 
 // URL DEPLOYMENT APPS SCRIPT ANDA
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwdvwSYLSKtyxoqN8keMkgxKw3hHsFlHo-pFxFyBLZPmtz_s5ZHZdl5eHpLM1xTWOnHJw/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwW41wS-Zrxq9QDpmDzmouoMYjT3QAo72MWS7FveqHDei68K9IcAy_hSVFkhFDoaYv7yw/exec";
 
 let activeTab = "activities";
 let currentDailyActivities = [];
@@ -408,21 +408,56 @@ async function handleDeleteTarget(id) {
   }
 }
 
-// Helpers
+// ==========================================
+// HELPERS (Format Tanggal & Nama Hari Otomatis)
+// ==========================================
+
 function formatDateToISO(date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
 
 function formatDateFullIndo(dateStr) {
   if (!dateStr) return "";
-  const [y, m, d] = dateStr.split("-");
-  return new Date(y, m - 1, d).toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  let cleanStr = String(dateStr).trim();
+  
+  if (cleanStr.includes("/")) {
+    const d = new Date(cleanStr);
+    if (!isNaN(d.getTime())) {
+      return d.toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+    }
+  }
+  
+  if (cleanStr.includes("-")) {
+    const [y, m, d] = cleanStr.split("-");
+    const dateObj = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
+    if (!isNaN(dateObj.getTime())) {
+      return dateObj.toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+    }
+  }
+  
+  return cleanStr;
 }
 
 function formatDateShortIndo(dateStr) {
   if (!dateStr) return "";
-  const [y, m, d] = dateStr.split("-");
-  return new Date(y, m - 1, d).toLocaleDateString("id-ID", { day: "numeric", month: "short" });
+  let cleanStr = String(dateStr).trim();
+
+  if (cleanStr.includes("/")) {
+    const d = new Date(cleanStr);
+    if (!isNaN(d.getTime())) {
+      return d.toLocaleDateString("id-ID", { day: "numeric", month: "short" });
+    }
+  }
+
+  if (cleanStr.includes("-")) {
+    const [y, m, d] = cleanStr.split("-");
+    const dateObj = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
+    if (!isNaN(dateObj.getTime())) {
+      return dateObj.toLocaleDateString("id-ID", { day: "numeric", month: "short" });
+    }
+  }
+
+  return cleanStr;
 }
 
 function escapeHtml(text) {
