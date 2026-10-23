@@ -1,11 +1,13 @@
 /**
- * FRONTEND CONTROLLER - Daily Activity Tracker Dashboard
+ * FRONTEND CONTROLLER - Dashboard Aktivitas & Target
  */
 
-// GANTI DENGAN URL DEPLOYMENT GOOGLE APPS SCRIPT ANDA
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwDTCxOsYubaTAWunNxDHGufb6he0VxrNJhj_LctY5bULaNhHlWfMFdiC90LCHJvVPwSA/exec";
+// URL DEPLOYMENT APPS SCRIPT ANDA
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxb8TzIqmAXrY9GDlxd2f67Y_NjHi0NLclEvuPyz1riDZ73BUHVZwT43SAt0yvdAvq_kA/exec";
 
+let activeTab = "activities";
 let currentDailyActivities = [];
+let currentTargets = [];
 
 document.addEventListener("DOMContentLoaded", () => {
   initTimeSelectors();
@@ -13,26 +15,49 @@ document.addEventListener("DOMContentLoaded", () => {
   const todayStr = formatDateToISO(new Date());
   document.getElementById("inputDate").value = todayStr;
   document.getElementById("dashboardFilterDate").value = todayStr;
+  document.getElementById("targetDate").value = todayStr;
 
   loadDailyActivities();
 });
 
-/**
- * Inisialisasi dropdown jam (00:00 - 23:55)
- */
+// Switch Tab Navbar
+function switchTab(tab) {
+  activeTab = tab;
+  const btnAct = document.getElementById("navBtnActivities");
+  const btnTgt = document.getElementById("navBtnTargets");
+  const tabAct = document.getElementById("tabActivities");
+  const tabTgt = document.getElementById("tabTargets");
+
+  if (tab === "activities") {
+    btnAct.className = "px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition cursor-pointer bg-blue-600 text-white shadow-xs";
+    btnTgt.className = "px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition cursor-pointer bg-slate-100 text-slate-600 hover:bg-slate-200";
+    tabAct.classList.remove("hidden");
+    tabTgt.classList.add("hidden");
+    loadDailyActivities();
+  } else {
+    btnTgt.className = "px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition cursor-pointer bg-emerald-600 text-white shadow-xs";
+    btnAct.className = "px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition cursor-pointer bg-slate-100 text-slate-600 hover:bg-slate-200";
+    tabTgt.classList.remove("hidden");
+    tabAct.classList.add("hidden");
+    loadTargets();
+  }
+}
+
+function refreshCurrentTab() {
+  if (activeTab === "activities") loadDailyActivities();
+  else loadTargets();
+}
+
 function initTimeSelectors() {
   const hours = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, "0"));
   const minutes = Array.from({ length: 12 }, (_, i) => String(i * 5).padStart(2, "0"));
 
-  const targetHourSelects = ["startHour", "endHour", "editStartHour", "editEndHour"];
-  const targetMinuteSelects = ["startMinute", "endMinute", "editStartMinute", "editEndMinute"];
-
-  targetHourSelects.forEach(id => {
+  ["startHour", "endHour", "editStartHour", "editEndHour"].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.innerHTML = hours.map(h => `<option value="${h}">${h}</option>`).join("");
   });
 
-  targetMinuteSelects.forEach(id => {
+  ["startMinute", "endMinute", "editStartMinute", "editEndMinute"].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.innerHTML = minutes.map(m => `<option value="${m}">${m}</option>`).join("");
   });
@@ -48,34 +73,31 @@ function initTimeSelectors() {
   document.getElementById("endMinute").value = curM;
 }
 
-/**
- * READ: Ambil Riwayat Aktivitas Khusus 1 Hari
- */
+// ==========================================
+// 1. LOGIKA AKTIVITAS
+// ==========================================
+
 async function loadDailyActivities() {
   const loading = document.getElementById("dailyLoading");
   const container = document.getElementById("dailyContainer");
-  const rangeLabel = document.getElementById("dailyDateLabel");
   const filterDateVal = document.getElementById("dashboardFilterDate").value;
 
   loading.classList.remove("hidden");
   container.classList.add("hidden");
 
-  rangeLabel.innerText = formatDateFullIndo(filterDateVal);
+  document.getElementById("dailyDateLabel").innerText = formatDateFullIndo(filterDateVal);
   document.getElementById("selectedDateText").innerText = formatDateShortIndo(filterDateVal);
 
   try {
     const res = await fetch(`${APPS_SCRIPT_URL}?action=getDailyActivities&date=${filterDateVal}`);
     const json = await res.json();
-
     loading.classList.add("hidden");
 
     if (json.status === "success") {
       currentDailyActivities = json.data || [];
       renderDailyList(currentDailyActivities);
       container.classList.remove("hidden");
-    } else {
-      throw new Error(json.message);
-    }
+    } else throw new Error(json.message);
   } catch (err) {
     loading.classList.add("hidden");
     container.classList.remove("hidden");
@@ -83,40 +105,24 @@ async function loadDailyActivities() {
   }
 }
 
-/**
- * Render Daftar Aktivitas Harian
- */
-/**
- * Render Daftar Aktivitas Harian dengan Tampilan Kartu CRUD yang Rapi
- */
 function renderDailyList(activities) {
   const container = document.getElementById("dailyContainer");
-  const statTotal = document.getElementById("statTotalActivities");
+  document.getElementById("statTotalActivities").innerText = activities.length;
   container.innerHTML = "";
 
-  statTotal.innerText = activities.length;
-
   if (activities.length === 0) {
-    container.innerHTML = `
-      <div class="text-center py-12 border border-dashed border-slate-200 rounded-xl">
-        <p class="text-slate-400 text-sm font-medium">Belum ada aktivitas yang dicatat untuk tanggal ini.</p>
-        <p class="text-slate-400 text-xs mt-1">Gunakan formulir di sebelah kiri untuk menambah kegiatan.</p>
-      </div>
-    `;
+    container.innerHTML = `<div class="text-center py-12 border border-dashed border-slate-200 rounded-xl text-slate-400 text-sm">Belum ada aktivitas yang dicatat untuk tanggal ini.</div>`;
     return;
   }
 
-  // Urutkan berdasarkan jam mulai
-  const sortedActivities = [...activities].sort((a, b) => a.startTime.localeCompare(b.startTime));
-
-  sortedActivities.forEach(item => {
+  [...activities].sort((a, b) => a.startTime.localeCompare(b.startTime)).forEach(item => {
     const card = document.createElement("div");
-    card.className = "p-4 rounded-2xl border border-slate-200 bg-white hover:shadow-sm transition flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4";
+    card.className = "p-4 rounded-2xl border border-slate-200 bg-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-2xs";
 
     card.innerHTML = `
       <div class="space-y-1.5 w-full">
         <div class="flex items-center gap-2 flex-wrap">
-          <span class="text-xs font-bold text-slate-700 bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200 flex items-center gap-1">
+          <span class="text-xs font-bold text-slate-700 bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200">
             ⏰ ${escapeHtml(item.startTime)} - ${escapeHtml(item.endTime)}
           </span>
           <span class="text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-100 px-2.5 py-1 rounded-lg">
@@ -128,21 +134,14 @@ function renderDailyList(activities) {
       </div>
 
       <div class="flex items-center gap-1.5 shrink-0 self-end sm:self-center border-t sm:border-t-0 pt-2 sm:pt-0 w-full sm:w-auto justify-end">
-        <button onclick="openEditModal('${item.id}')" title="Edit" class="px-3 py-1.5 text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition cursor-pointer flex items-center gap-1">
-          ✏️ Edit
-        </button>
-        <button onclick="handleDeleteActivity('${item.id}')" title="Hapus" class="px-3 py-1.5 text-xs font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg transition cursor-pointer flex items-center gap-1">
-          🗑️ Hapus
-        </button>
+        <button onclick="openEditModal('${item.id}')" class="px-3 py-1.5 text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition cursor-pointer">✏️ Edit</button>
+        <button onclick="handleDeleteActivity('${item.id}')" class="px-3 py-1.5 text-xs font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg transition cursor-pointer">🗑️ Hapus</button>
       </div>
     `;
-
     container.appendChild(card);
   });
 }
-/**
- * CREATE: Simpan Aktivitas Baru
- */
+
 async function handleFormSubmit(event) {
   event.preventDefault();
   const btn = document.getElementById("btnSubmitActivity");
@@ -163,7 +162,6 @@ async function handleFormSubmit(event) {
 
   btn.disabled = true;
   btn.innerText = "Menyimpan...";
-  alertBox.className = "hidden text-xs text-center p-2 rounded-lg font-medium";
 
   try {
     const res = await fetch(APPS_SCRIPT_URL, {
@@ -175,16 +173,11 @@ async function handleFormSubmit(event) {
     if (result.status === "success") {
       alertBox.innerText = "Aktivitas berhasil disimpan!";
       alertBox.className = "text-xs text-center p-2 rounded-lg font-medium bg-emerald-50 text-emerald-700 block border border-emerald-200";
-
       document.getElementById("inputActivity").value = "";
       document.getElementById("inputNotes").value = "";
-
-      // Otomatis arahkan filter dashboard ke tanggal kegiatan yang baru disimpan
       document.getElementById("dashboardFilterDate").value = inputDateVal;
       loadDailyActivities();
-    } else {
-      throw new Error(result.message);
-    }
+    } else throw new Error(result.message);
   } catch (err) {
     alertBox.innerText = "Gagal: " + err.message;
     alertBox.className = "text-xs text-center p-2 rounded-lg font-medium bg-rose-50 text-rose-700 block border border-rose-200";
@@ -195,9 +188,6 @@ async function handleFormSubmit(event) {
   }
 }
 
-/**
- * UPDATE: Edit Aktivitas
- */
 function openEditModal(id) {
   const item = currentDailyActivities.find(a => String(a.id) === String(id));
   if (!item) return;
@@ -254,9 +244,7 @@ async function handleEditSubmit(event) {
     if (result.status === "success") {
       closeEditModal();
       loadDailyActivities();
-    } else {
-      alert("Gagal update: " + result.message);
-    }
+    } else alert("Gagal update: " + result.message);
   } catch (err) {
     alert("Error: " + err.message);
   } finally {
@@ -265,24 +253,156 @@ async function handleEditSubmit(event) {
   }
 }
 
-/**
- * DELETE: Hapus Aktivitas
- */
 async function handleDeleteActivity(id) {
   if (!confirm("Apakah Anda yakin ingin menghapus aktivitas ini?")) return;
-
   try {
     const res = await fetch(APPS_SCRIPT_URL, {
       method: "POST",
       body: JSON.stringify({ action: "deleteActivity", id: id })
     });
     const result = await res.json();
+    if (result.status === "success") loadDailyActivities();
+    else alert("Gagal menghapus: " + result.message);
+  } catch (err) {
+    alert("Error: " + err.message);
+  }
+}
+
+// ==========================================
+// 2. LOGIKA TARGET
+// ==========================================
+
+async function loadTargets() {
+  const loading = document.getElementById("targetLoading");
+  const container = document.getElementById("targetContainer");
+
+  loading.classList.remove("hidden");
+  container.classList.add("hidden");
+
+  try {
+    const res = await fetch(`${APPS_SCRIPT_URL}?action=getTargets`);
+    const json = await res.json();
+    loading.classList.add("hidden");
+
+    if (json.status === "success") {
+      currentTargets = json.data || [];
+      renderTargetList(currentTargets);
+      container.classList.remove("hidden");
+    } else throw new Error(json.message);
+  } catch (err) {
+    loading.classList.add("hidden");
+    container.classList.remove("hidden");
+    container.innerHTML = `<div class="p-4 bg-rose-50 text-rose-600 rounded-xl text-xs font-semibold text-center">Gagal memuat target: ${err.message}</div>`;
+  }
+}
+
+function renderTargetList(targets) {
+  const container = document.getElementById("targetContainer");
+  document.getElementById("statTotalTargets").innerText = targets.length;
+  container.innerHTML = "";
+
+  if (targets.length === 0) {
+    container.innerHTML = `<div class="text-center py-12 border border-dashed border-slate-200 rounded-xl text-slate-400 text-sm">Belum ada target yang ditentukan.</div>`;
+    return;
+  }
+
+  targets.forEach(item => {
+    const isDone = item.status === "Sudah";
+    const card = document.createElement("div");
+    card.className = `p-4 rounded-2xl border transition flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 ${
+      isDone ? "bg-emerald-50/50 border-emerald-200" : "bg-white border-slate-200"
+    }`;
+
+    card.innerHTML = `
+      <div class="space-y-1 w-full">
+        <div class="flex items-center gap-2">
+          <span class="text-xs font-semibold text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded-md border border-slate-200">
+            📅 ${formatDateFullIndo(item.targetDate)}
+          </span>
+          <span class="text-xs font-bold px-2.5 py-0.5 rounded-md border ${
+            isDone ? "bg-emerald-100 text-emerald-700 border-emerald-300" : "bg-amber-100 text-amber-700 border-amber-300"
+          }">
+            ${isDone ? "✓ Sudah Dilaksanakan" : "⏳ Belum Dilaksanakan"}
+          </span>
+        </div>
+        <h3 class="text-base font-bold text-slate-900 ${isDone ? "line-through text-slate-400" : ""}">${escapeHtml(item.title)}</h3>
+      </div>
+
+      <div class="flex items-center gap-2 shrink-0 self-end sm:self-center">
+        <button onclick="toggleTargetStatus('${item.id}', '${isDone ? "Belum" : "Sudah"}')" class="px-3 py-1.5 text-xs font-bold rounded-lg transition cursor-pointer flex items-center gap-1 ${
+          isDone ? "bg-amber-100 text-amber-800 hover:bg-amber-200" : "bg-emerald-600 text-white hover:bg-emerald-700"
+        }">
+          ${isDone ? "Tandai Belum" : "Tandai Sudah"}
+        </button>
+        <button onclick="handleDeleteTarget('${item.id}')" class="px-3 py-1.5 text-xs font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg transition cursor-pointer">
+          🗑️
+        </button>
+      </div>
+    `;
+    container.appendChild(card);
+  });
+}
+
+async function handleTargetSubmit(event) {
+  event.preventDefault();
+  const btn = document.getElementById("btnSubmitTarget");
+  const alertBox = document.getElementById("targetFormAlert");
+
+  const payload = {
+    title: document.getElementById("targetTitle").value,
+    targetDate: document.getElementById("targetDate").value
+  };
+
+  btn.disabled = true;
+  btn.innerText = "Menyimpan...";
+
+  try {
+    const res = await fetch(APPS_SCRIPT_URL, {
+      method: "POST",
+      body: JSON.stringify({ action: "addTarget", data: payload })
+    });
+    const result = await res.json();
 
     if (result.status === "success") {
-      loadDailyActivities();
-    } else {
-      alert("Gagal menghapus: " + result.message);
-    }
+      alertBox.innerText = "Target berhasil ditambahkan!";
+      alertBox.className = "text-xs text-center p-2 rounded-lg font-medium bg-emerald-50 text-emerald-700 block border border-emerald-200";
+      document.getElementById("targetTitle").value = "";
+      loadTargets();
+    } else throw new Error(result.message);
+  } catch (err) {
+    alertBox.innerText = "Gagal: " + err.message;
+    alertBox.className = "text-xs text-center p-2 rounded-lg font-medium bg-rose-50 text-rose-700 block border border-rose-200";
+  } finally {
+    btn.disabled = false;
+    btn.innerText = "+ Simpan Target";
+    setTimeout(() => alertBox.classList.add("hidden"), 3500);
+  }
+}
+
+async function toggleTargetStatus(id, newStatus) {
+  try {
+    const res = await fetch(APPS_SCRIPT_URL, {
+      method: "POST",
+      body: JSON.stringify({ action: "toggleTargetStatus", id: id, status: newStatus })
+    });
+    const result = await res.json();
+    if (result.status === "success") loadTargets();
+    else alert("Gagal update status: " + result.message);
+  } catch (err) {
+    alert("Error: " + err.message);
+  }
+}
+
+async function handleDeleteTarget(id) {
+  if (!confirm("Apakah Anda yakin ingin menghapus target ini?")) return;
+  try {
+    const res = await fetch(APPS_SCRIPT_URL, {
+      method: "POST",
+      body: JSON.stringify({ action: "deleteTarget", id: id })
+    });
+    const result = await res.json();
+    if (result.status === "success") loadTargets();
+    else alert("Gagal menghapus target: " + result.message);
   } catch (err) {
     alert("Error: " + err.message);
   }
@@ -290,40 +410,22 @@ async function handleDeleteActivity(id) {
 
 // Helpers
 function formatDateToISO(date) {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const d = String(date.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
 
 function formatDateFullIndo(dateStr) {
   if (!dateStr) return "";
   const [y, m, d] = dateStr.split("-");
-  const dt = new Date(y, m - 1, d);
-  return dt.toLocaleDateString("id-ID", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric"
-  });
+  return new Date(y, m - 1, d).toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
 }
 
 function formatDateShortIndo(dateStr) {
   if (!dateStr) return "";
   const [y, m, d] = dateStr.split("-");
-  const dt = new Date(y, m - 1, d);
-  return dt.toLocaleDateString("id-ID", {
-    day: "numeric",
-    month: "short"
-  });
+  return new Date(y, m - 1, d).toLocaleDateString("id-ID", { day: "numeric", month: "short" });
 }
 
 function escapeHtml(text) {
   if (!text) return "";
-  return text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
+  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
 }
