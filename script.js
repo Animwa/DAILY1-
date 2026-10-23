@@ -1,25 +1,24 @@
 /**
- * FRONTEND CONTROLLER - 1% Daily & Weekly Activity Tracker (CRUD 7 Hari)
+ * FRONTEND CONTROLLER - Daily Activity Tracker Dashboard
  */
 
-// GANTI DENGAN URL WEB APP DEPLOYMENT APPS SCRIPT ANDA
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz-2yGZeA8ACZ-8hdJ1y3Ys42nTuvW9CWaZz7gRyVP5eo6H82NxIAN9NdfnV_Cum8SZ_w/exec";
+// URL DEPLOYMENT GOOGLE APPS SCRIPT
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxJqigPqa6AO-JMAFnzck7cZC-WuOCPRQT4QXQZ1HHmBMPOD3kH7Bw6oBTVMuQxg1rqdQ/exec";
 
-// Cache penyimpanan data kegiatan aktif
-let allActivities = [];
+let currentDailyActivities = [];
 
 document.addEventListener("DOMContentLoaded", () => {
   initTimeSelectors();
   
-  // Set default tanggal form tambah ke hari ini
-  document.getElementById("inputDate").value = formatDateToISO(new Date());
+  const todayStr = formatDateToISO(new Date());
+  document.getElementById("inputDate").value = todayStr;
+  document.getElementById("dashboardFilterDate").value = todayStr;
 
-  fetchAiInsight();
-  loadWeeklyActivities();
+  loadDailyActivities();
 });
 
 /**
- * Inisialisasi dropdown jam 24 jam (00:00 - 23:55)
+ * Inisialisasi dropdown jam (00:00 - 23:55)
  */
 function initTimeSelectors() {
   const hours = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, "0"));
@@ -38,7 +37,6 @@ function initTimeSelectors() {
     if (el) el.innerHTML = minutes.map(m => `<option value="${m}">${m}</option>`).join("");
   });
 
-  // Default jam saat ini
   const now = new Date();
   const curH = String(now.getHours()).padStart(2, "0");
   const curM = String(Math.floor(now.getMinutes() / 5) * 5).padStart(2, "0");
@@ -51,35 +49,29 @@ function initTimeSelectors() {
 }
 
 /**
- * 1. READ: Ambil Riwayat 7 Hari Terakhir & Kelompokkan Per Hari
+ * READ: Ambil Riwayat Aktivitas Khusus 1 Hari
  */
-async function loadWeeklyActivities() {
-  const loading = document.getElementById("weeklyLoading");
-  const container = document.getElementById("weeklyContainer");
-  const rangeLabel = document.getElementById("weekDateRangeLabel");
+async function loadDailyActivities() {
+  const loading = document.getElementById("dailyLoading");
+  const container = document.getElementById("dailyContainer");
+  const rangeLabel = document.getElementById("dailyDateLabel");
+  const filterDateVal = document.getElementById("dashboardFilterDate").value;
 
   loading.classList.remove("hidden");
   container.classList.add("hidden");
 
-  // Hitung rentang 7 hari terakhir: dari 6 hari lalu s/d hari ini
-  const today = new Date();
-  const past7Days = new Date();
-  past7Days.setDate(today.getDate() - 6);
-
-  const startDateStr = formatDateToISO(past7Days);
-  const endDateStr = formatDateToISO(today);
-
-  rangeLabel.innerText = `${formatDateShortIndo(startDateStr)} - ${formatDateShortIndo(endDateStr)}`;
+  rangeLabel.innerText = formatDateFullIndo(filterDateVal);
+  document.getElementById("selectedDateText").innerText = formatDateShortIndo(filterDateVal);
 
   try {
-    const res = await fetch(`${APPS_SCRIPT_URL}?action=getWeeklyActivities&startDate=${startDateStr}&endDate=${endDateStr}`);
+    const res = await fetch(`${APPS_SCRIPT_URL}?action=getDailyActivities&date=${filterDateVal}`);
     const json = await res.json();
 
     loading.classList.add("hidden");
 
     if (json.status === "success") {
-      allActivities = json.data || [];
-      renderWeeklyGroupedList(startDateStr, endDateStr, allActivities);
+      currentDailyActivities = json.data || [];
+      renderDailyList(currentDailyActivities);
       container.classList.remove("hidden");
     } else {
       throw new Error(json.message);
@@ -92,102 +84,62 @@ async function loadWeeklyActivities() {
 }
 
 /**
- * Render Riwayat Terkelompok per Hari (Mundur dari Hari Ini)
+ * Render Daftar Aktivitas Harian
  */
-function renderWeeklyGroupedList(startDateStr, endDateStr, activities) {
-  const container = document.getElementById("weeklyContainer");
+function renderDailyList(activities) {
+  const container = document.getElementById("dailyContainer");
+  const statTotal = document.getElementById("statTotalActivities");
   container.innerHTML = "";
 
-  // Buat array tanggal 7 hari terakhir (Urutan terbalik: Hari ini paling atas)
-  const daysList = [];
-  let curr = new Date(endDateStr);
-  const end = new Date(startDateStr);
+  statTotal.innerText = activities.length;
 
-  while (curr >= end) {
-    daysList.push(formatDateToISO(curr));
-    curr.setDate(curr.getDate() - 1);
+  if (activities.length === 0) {
+    container.innerHTML = `
+      <div class="text-center py-12 border border-dashed border-slate-200 rounded-xl">
+        <p class="text-slate-400 text-sm font-medium">Belum ada aktivitas yang dicatat untuk hari ini.</p>
+        <p class="text-slate-400 text-xs mt-1">Gunakan formulir di sebelah kiri untuk menambah kegiatan.</p>
+      </div>
+    `;
+    return;
   }
 
-  daysList.forEach(dateStr => {
-    // Filter aktivitas di hari tersebut dan urutkan jam mulai
-    const dayActivities = activities
-      .filter(a => a.date === dateStr)
-      .sort((a, b) => a.startTime.localeCompare(b.startTime));
+  // Urutkan berdasarkan jam mulai
+  const sortedActivities = [...activities].sort((a, b) => a.startTime.localeCompare(b.startTime));
 
-    const isToday = dateStr === formatDateToISO(new Date());
+  sortedActivities.forEach(item => {
+    const card = document.createElement("div");
+    card.className = "p-3.5 rounded-xl border border-slate-200/80 bg-white hover:border-slate-300 transition flex items-start justify-between gap-3 shadow-2xs";
 
-    const dayCard = document.createElement("div");
-    dayCard.className = `rounded-2xl border transition-all ${
-      isToday 
-        ? "border-blue-200 bg-blue-50/20 shadow-xs" 
-        : "border-slate-200/80 bg-white"
-    }`;
-
-    // Header Hari
-    let headerHtml = `
-      <div class="p-3.5 px-4 flex items-center justify-between border-b ${isToday ? 'border-blue-100' : 'border-slate-100'}">
-        <div class="flex items-center gap-2">
-          <span class="text-sm font-bold ${isToday ? 'text-blue-700' : 'text-slate-800'}">
-            ${formatDateFullIndo(dateStr)}
+    card.innerHTML = `
+      <div class="space-y-1.5 w-full">
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="text-xs font-bold text-slate-800 bg-slate-100 px-2.5 py-0.5 rounded-md border border-slate-200">
+            ⏰ ${item.startTime} - ${item.endTime}
           </span>
-          ${isToday ? '<span class="bg-blue-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">HARI INI</span>' : ''}
+          <span class="text-xs font-medium text-blue-700 bg-blue-50 border border-blue-100 px-2.5 py-0.5 rounded-md">
+            ${escapeHtml(item.category)}
+          </span>
         </div>
-        <span class="text-xs font-medium px-2 py-0.5 rounded-full ${
-          dayActivities.length > 0 
-            ? 'bg-slate-100 text-slate-600' 
-            : 'bg-slate-50 text-slate-400'
-        }">
-          ${dayActivities.length} Kegiatan
-        </span>
+        <h4 class="text-sm font-semibold text-slate-900">${escapeHtml(item.activity)}</h4>
+        ${item.notes && item.notes !== "-" ? `<p class="text-xs text-slate-500 italic bg-slate-50 p-2 rounded-lg border border-slate-100">${escapeHtml(item.notes)}</p>` : ""}
+      </div>
+
+      <div class="flex items-center gap-1 shrink-0 pt-0.5">
+        <button onclick="openEditModal('${item.id}')" title="Edit" class="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-slate-50 rounded-lg transition cursor-pointer">
+          ✏️
+        </button>
+        <button onclick="handleDeleteActivity('${item.id}')" title="Hapus" class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-slate-50 rounded-lg transition cursor-pointer">
+          🗑️
+        </button>
       </div>
     `;
 
-    // Daftar Aktivitas di Hari Tersebut
-    let bodyHtml = `<div class="p-3.5 space-y-2.5">`;
-
-    if (dayActivities.length === 0) {
-      bodyHtml += `
-        <p class="text-xs text-slate-400 italic py-2 text-center">Tidak ada aktivitas yang dicatat di hari ini.</p>
-      `;
-    } else {
-      dayActivities.forEach(item => {
-        bodyHtml += `
-          <div class="p-3 rounded-xl border border-slate-100 bg-slate-50/80 hover:bg-slate-50 transition flex items-start justify-between gap-3 group">
-            <div class="space-y-1 w-full">
-              <div class="flex items-center gap-2 flex-wrap">
-                <span class="text-xs font-bold text-slate-800 bg-white px-2 py-0.5 rounded border border-slate-200 shadow-2xs">
-                  ⏰ ${item.startTime} - ${item.endTime}
-                </span>
-                <span class="text-xs font-medium text-slate-600 bg-slate-200/70 px-2 py-0.5 rounded">
-                  ${escapeHtml(item.category)}
-                </span>
-              </div>
-              <h4 class="text-sm font-semibold text-slate-900">${escapeHtml(item.activity)}</h4>
-              ${item.notes && item.notes !== "-" ? `<p class="text-xs text-slate-500 italic bg-white/70 p-2 rounded border border-slate-100">${escapeHtml(item.notes)}</p>` : ""}
-            </div>
-
-            <!-- Tombol Aksi CRUD: Edit & Hapus -->
-            <div class="flex items-center gap-1 shrink-0 pt-0.5">
-              <button onclick="openEditModal('${item.id}')" title="Edit" class="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-white rounded-lg transition cursor-pointer">
-                ✏️
-              </button>
-              <button onclick="handleDeleteActivity('${item.id}')" title="Hapus" class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-white rounded-lg transition cursor-pointer">
-                🗑️
-              </button>
-            </div>
-          </div>
-        `;
-      });
-    }
-
-    bodyHtml += `</div>`;
-    dayCard.innerHTML = headerHtml + bodyHtml;
-    container.appendChild(dayCard);
+    container.appendChild(card);
   });
 }
 
 /**
- * 2. CREATE: Simpan Aktivitas Baru
+ * CREATE: Simpan Aktivitas Baru
  */
 async function handleFormSubmit(event) {
   event.preventDefault();
@@ -196,9 +148,10 @@ async function handleFormSubmit(event) {
 
   const startTime = `${document.getElementById("startHour").value}:${document.getElementById("startMinute").value}`;
   const endTime = `${document.getElementById("endHour").value}:${document.getElementById("endMinute").value}`;
+  const inputDateVal = document.getElementById("inputDate").value;
 
   const payload = {
-    date: document.getElementById("inputDate").value,
+    date: inputDateVal,
     startTime: startTime,
     endTime: endTime,
     category: document.getElementById("inputCategory").value,
@@ -218,13 +171,15 @@ async function handleFormSubmit(event) {
     const result = await res.json();
 
     if (result.status === "success") {
-      alertBox.innerText = "Aktivitas berhasil ditambahkan! ✓";
+      alertBox.innerText = "Aktivitas berhasil disimpan!";
       alertBox.className = "text-xs text-center p-2 rounded-lg font-medium bg-emerald-50 text-emerald-700 block border border-emerald-200";
 
       document.getElementById("inputActivity").value = "";
       document.getElementById("inputNotes").value = "";
 
-      loadWeeklyActivities();
+      // Samakan filter tanggal dashboard dengan tanggal input
+      document.getElementById("dashboardFilterDate").value = inputDateVal;
+      loadDailyActivities();
     } else {
       throw new Error(result.message);
     }
@@ -239,10 +194,10 @@ async function handleFormSubmit(event) {
 }
 
 /**
- * 3. UPDATE: Buka Modal & Simpan Perubahan
+ * UPDATE: Edit Aktivitas
  */
 function openEditModal(id) {
-  const item = allActivities.find(a => String(a.id) === String(id));
+  const item = currentDailyActivities.find(a => String(a.id) === String(id));
   if (!item) return;
 
   document.getElementById("editId").value = item.id;
@@ -296,7 +251,7 @@ async function handleEditSubmit(event) {
 
     if (result.status === "success") {
       closeEditModal();
-      loadWeeklyActivities();
+      loadDailyActivities();
     } else {
       alert("Gagal update: " + result.message);
     }
@@ -309,10 +264,10 @@ async function handleEditSubmit(event) {
 }
 
 /**
- * 4. DELETE: Hapus Aktivitas
+ * DELETE: Hapus Aktivitas
  */
 async function handleDeleteActivity(id) {
-  if (!confirm("Apakah Anda yakin ingin menghapus aktivitas ini dari Google Sheets?")) return;
+  if (!confirm("Apakah Anda yakin ingin menghapus aktivitas ini?")) return;
 
   try {
     const res = await fetch(APPS_SCRIPT_URL, {
@@ -322,7 +277,7 @@ async function handleDeleteActivity(id) {
     const result = await res.json();
 
     if (result.status === "success") {
-      loadWeeklyActivities();
+      loadDailyActivities();
     } else {
       alert("Gagal menghapus: " + result.message);
     }
@@ -331,38 +286,7 @@ async function handleDeleteActivity(id) {
   }
 }
 
-/**
- * Gemini AI Insight Fetcher
- */
-async function fetchAiInsight() {
-  const badge = document.getElementById("aiCategoryBadge");
-  const insightText = document.getElementById("aiInsightText");
-  const actionText = document.getElementById("aiActionText");
-  const btnRefresh = document.getElementById("btnRefreshAi");
-
-  badge.innerText = "Memuat...";
-  insightText.innerText = "Gemini sedang merumuskan prinsip 1% hari ini...";
-  btnRefresh.disabled = true;
-
-  try {
-    const response = await fetch(`${APPS_SCRIPT_URL}?action=getAiInsight`);
-    const result = await response.json();
-
-    if (result.status === "success" && result.insight) {
-      badge.innerText = result.insight.category;
-      insightText.innerText = `"${result.insight.insight}"`;
-      actionText.innerText = result.insight.action;
-    }
-  } catch (err) {
-    badge.innerText = "Kebugaran & Recovery";
-    insightText.innerText = '"Bukan seberapa keras Anda berlatih hari ini, melainkan seberapa konsisten Anda hadir setiap hari."';
-    actionText.innerText = "Lakukan 10 kali squat atau peregangan 2 menit sekarang.";
-  } finally {
-    btnRefresh.disabled = false;
-  }
-}
-
-// Helper: Format tanggal ISO YYYY-MM-DD
+// Helpers
 function formatDateToISO(date) {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, "0");
@@ -370,20 +294,20 @@ function formatDateToISO(date) {
   return `${y}-${m}-${d}`;
 }
 
-// Helper: Format Lengkap (Contoh: Rabu, 23 Sep 2026)
 function formatDateFullIndo(dateStr) {
+  if (!dateStr) return "";
   const [y, m, d] = dateStr.split("-");
   const dt = new Date(y, m - 1, d);
   return dt.toLocaleDateString("id-ID", {
     weekday: "long",
     day: "numeric",
-    month: "short",
+    month: "long",
     year: "numeric"
   });
 }
 
-// Helper: Format Singkat (Contoh: 17 Sep)
 function formatDateShortIndo(dateStr) {
+  if (!dateStr) return "";
   const [y, m, d] = dateStr.split("-");
   const dt = new Date(y, m - 1, d);
   return dt.toLocaleDateString("id-ID", {
