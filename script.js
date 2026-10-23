@@ -3,7 +3,7 @@
  */
 
 // URL DEPLOYMENT GOOGLE APPS SCRIPT
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxMHbv1RFa6YThlnh50NyATe1PzP3HTHLxI4LHvxRZu-977WClqcvsfk8sIfhAiOK2PPw/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw1cKfDTdBx36rlvpBoJBFkzncLfZqaMMopaA6WDDg93ovjieUKv3oU0tLDNUQklnvxmw/exec";
 
 let currentDailyActivities = [];
 
