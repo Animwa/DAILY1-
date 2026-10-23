@@ -2,7 +2,7 @@
  * FRONTEND CONTROLLER - Dashboard Aktivitas & Target
  */
 
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxl3rwFhja-GUaFjYrWvKdEmChOSEdR13EeOwxGLSrOLBkUCYLYUfSe5HSk---aaEFjaA/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw2ZokCXccabnc400X-5Lur1O0nlRhVzVSrd4GpO32CdMW8CZYYB8tODGBP6BqsR9Cjbw/exec";
 
 let activeTab = "activities";
 let currentDailyActivities = [];
@@ -268,15 +268,17 @@ async function handleDeleteActivity(id) {
 }
 
 // ==========================================
-// 2. LOGIKA TARGET
+// 2. LOGIKA TARGET (PEMISAHAN TERLAKSANA & PENGELOMPOKAN BULAN)
 // ==========================================
 
 async function loadTargets() {
   const loading = document.getElementById("targetLoading");
-  const container = document.getElementById("targetContainer");
+  const activeSection = document.getElementById("activeTargetSection");
+  const completedSection = document.getElementById("completedTargetSection");
 
   loading.classList.remove("hidden");
-  container.classList.add("hidden");
+  activeSection.classList.add("hidden");
+  completedSection.classList.add("hidden");
 
   try {
     const res = await fetch(`${APPS_SCRIPT_URL}?action=getTargets`);
@@ -286,66 +288,137 @@ async function loadTargets() {
     if (json.status === "success") {
       currentTargets = json.data || [];
       renderTargetList(currentTargets);
-      container.classList.remove("hidden");
+      activeSection.classList.remove("hidden");
+      completedSection.classList.remove("hidden");
     } else throw new Error(json.message);
   } catch (err) {
-    loading.classList.add("hidden");
-    container.classList.remove("hidden");
-    container.innerHTML = `<div class="p-4 bg-rose-50 text-rose-600 rounded-xl text-xs font-semibold text-center">Gagal memuat target: ${err.message}</div>`;
+    loading.classList.remove("hidden");
+    loading.innerHTML = `<div class="p-4 bg-rose-50 text-rose-600 rounded-xl text-xs font-semibold text-center">Gagal memuat target: ${err.message}</div>`;
   }
 }
 
 function renderTargetList(targets) {
-  const container = document.getElementById("targetContainer");
-  document.getElementById("statTotalTargets").innerText = targets.length;
-  container.innerHTML = "";
+  const activeContainer = document.getElementById("activeTargetContainer");
+  const completedContainer = document.getElementById("completedTargetContainer");
 
-  if (targets.length === 0) {
-    container.innerHTML = `<div class="text-center py-12 border border-dashed border-slate-200 rounded-xl text-slate-400 text-sm">Belum ada target yang ditentukan.</div>`;
-    return;
+  const statActive = document.getElementById("statActiveTargets");
+  const statCompleted = document.getElementById("statCompletedTargets");
+  const badgeActive = document.getElementById("badgeActiveCount");
+  const badgeCompleted = document.getElementById("badgeCompletedCount");
+
+  activeContainer.innerHTML = "";
+  completedContainer.innerHTML = "";
+
+  // Pisahkan Target Belum & Sudah Dilaksanakan
+  const activeTargets = targets.filter(t => t.status !== "Sudah" && t.status !== "Selesai");
+  const completedTargets = targets.filter(t => t.status === "Sudah" || t.status === "Selesai");
+
+  // Update Statistik
+  statActive.innerText = activeTargets.length;
+  badgeActive.innerText = activeTargets.length;
+  statCompleted.innerText = completedTargets.length;
+  badgeCompleted.innerText = completedTargets.length;
+
+  // 1. RENDER TARGET BELUM DILAKSANAKAN (Urut Tanggal Terdekat)
+  const sortedActive = [...activeTargets].sort((a, b) => new Date(a.targetDate) - new Date(b.targetDate));
+
+  if (sortedActive.length === 0) {
+    activeContainer.innerHTML = `<div class="text-center py-6 border border-dashed border-slate-200 rounded-xl text-slate-400 text-xs">Tidak ada target aktif yang belum dilaksanakan.</div>`;
+  } else {
+    sortedActive.forEach(item => {
+      const card = document.createElement("div");
+      card.className = "p-4 rounded-2xl border border-slate-200 bg-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition hover:border-slate-300 shadow-2xs";
+
+      card.innerHTML = `
+        <div class="space-y-1 w-full">
+          <div class="flex items-center gap-2 flex-wrap">
+            <span class="text-xs font-semibold text-slate-600 bg-slate-100 px-2.5 py-0.5 rounded-md border border-slate-200">
+              📅 ${formatDateFullIndo(item.targetDate)}
+            </span>
+            <span class="text-xs font-bold bg-amber-100 text-amber-700 border border-amber-300 px-2.5 py-0.5 rounded-md">
+              ⏳ Belum Dilaksanakan
+            </span>
+          </div>
+          <h3 class="text-base font-bold text-slate-900">${escapeHtml(item.title)}</h3>
+        </div>
+
+        <div class="flex items-center gap-1.5 shrink-0 self-end sm:self-center">
+          <button onclick="openEditTargetModal('${item.id}')" class="px-3 py-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition cursor-pointer">
+            ✏️ Edit
+          </button>
+          <button onclick="toggleTargetStatus('${item.id}', 'Sudah')" class="px-3 py-1.5 text-xs font-bold bg-emerald-600 text-white hover:bg-emerald-700 rounded-lg transition cursor-pointer flex items-center gap-1 shadow-xs">
+            ✓ Tandai Sudah
+          </button>
+          <button onclick="handleDeleteTarget('${item.id}')" class="px-3 py-1.5 text-xs font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg transition cursor-pointer">
+            🗑️
+          </button>
+        </div>
+      `;
+      activeContainer.appendChild(card);
+    });
   }
 
-  // URUTKAN DARI TANGGAL TERDEKAT KE PALING JAUH
-  const sortedTargets = [...targets].sort((a, b) => new Date(a.targetDate) - new Date(b.targetDate));
+  // 2. RENDER TARGET SUDAH DILAKSANAKAN (Kelompokkan Per Bulan & Tahun)
+  if (completedTargets.length === 0) {
+    completedContainer.innerHTML = `<div class="text-center py-6 border border-dashed border-slate-200 rounded-xl text-slate-400 text-xs">Belum ada target yang diselesaikan.</div>`;
+  } else {
+    const groupedByMonth = {};
+    const sortedCompleted = [...completedTargets].sort((a, b) => new Date(b.targetDate) - new Date(a.targetDate));
 
-  sortedTargets.forEach(item => {
-    const isDone = item.status === "Sudah";
-    const card = document.createElement("div");
-    card.className = `p-4 rounded-2xl border transition flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 ${
-      isDone ? "bg-emerald-50/50 border-emerald-200" : "bg-white border-slate-200"
-    }`;
+    sortedCompleted.forEach(item => {
+      const monthYearKey = getMonthYearTitle(item.targetDate);
+      if (!groupedByMonth[monthYearKey]) {
+        groupedByMonth[monthYearKey] = [];
+      }
+      groupedByMonth[monthYearKey].push(item);
+    });
 
-    card.innerHTML = `
-      <div class="space-y-1 w-full">
-        <div class="flex items-center gap-2 flex-wrap">
-          <span class="text-xs font-semibold text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded-md border border-slate-200">
-            📅 ${formatDateFullIndo(item.targetDate)}
+    Object.keys(groupedByMonth).forEach(monthGroup => {
+      const monthSection = document.createElement("div");
+      monthSection.className = "space-y-3";
+
+      let monthHtml = `
+        <div class="flex items-center gap-2 border-b border-slate-100 pb-1.5">
+          <span class="text-xs font-extrabold text-slate-700 uppercase tracking-wider bg-slate-100 px-3 py-1 rounded-lg border border-slate-200">
+            🗓️ ${monthGroup}
           </span>
-          <span class="text-xs font-bold px-2.5 py-0.5 rounded-md border ${
-            isDone ? "bg-emerald-100 text-emerald-700 border-emerald-300" : "bg-amber-100 text-amber-700 border-amber-300"
-          }">
-            ${isDone ? "✓ Sudah Dilaksanakan" : "⏳ Belum Dilaksanakan"}
-          </span>
+          <span class="text-xs text-slate-400 font-semibold">(${groupedByMonth[monthGroup].length} Target)</span>
         </div>
-        <h3 class="text-base font-bold text-slate-900 ${isDone ? "line-through text-slate-400" : ""}">${escapeHtml(item.title)}</h3>
-      </div>
+        <div class="space-y-2.5">
+      `;
 
-      <div class="flex items-center gap-1.5 shrink-0 self-end sm:self-center">
-        <button onclick="openEditTargetModal('${item.id}')" class="px-3 py-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition cursor-pointer">
-          ✏️ Edit
-        </button>
-        <button onclick="toggleTargetStatus('${item.id}', '${isDone ? "Belum" : "Sudah"}')" class="px-3 py-1.5 text-xs font-bold rounded-lg transition cursor-pointer flex items-center gap-1 ${
-          isDone ? "bg-amber-100 text-amber-800 hover:bg-amber-200" : "bg-emerald-600 text-white hover:bg-emerald-700"
-        }">
-          ${isDone ? "Tandai Belum" : "Tandai Sudah"}
-        </button>
-        <button onclick="handleDeleteTarget('${item.id}')" class="px-3 py-1.5 text-xs font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg transition cursor-pointer">
-          🗑️
-        </button>
-      </div>
-    `;
-    container.appendChild(card);
-  });
+      groupedByMonth[monthGroup].forEach(item => {
+        monthHtml += `
+          <div class="p-3.5 rounded-xl border border-emerald-200 bg-emerald-50/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div class="space-y-1 w-full">
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="text-xs font-semibold text-slate-500 bg-white px-2 py-0.5 rounded-md border border-slate-200">
+                  📅 ${formatDateFullIndo(item.targetDate)}
+                </span>
+                <span class="text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 px-2 py-0.5 rounded-md">
+                  ✓ Sudah Dilaksanakan
+                </span>
+              </div>
+              <h4 class="text-sm font-bold text-slate-800 line-through decoration-emerald-600/60">${escapeHtml(item.title)}</h4>
+            </div>
+
+            <div class="flex items-center gap-1.5 shrink-0 self-end sm:self-center">
+              <button onclick="toggleTargetStatus('${item.id}', 'Belum')" class="px-2.5 py-1 text-xs font-semibold bg-amber-100 text-amber-800 hover:bg-amber-200 rounded-lg transition cursor-pointer">
+                ↩️ Batalkan
+              </button>
+              <button onclick="handleDeleteTarget('${item.id}')" class="px-2.5 py-1 text-xs font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg transition cursor-pointer">
+                🗑️
+              </button>
+            </div>
+          </div>
+        `;
+      });
+
+      monthHtml += `</div>`;
+      monthSection.innerHTML = monthHtml;
+      completedContainer.appendChild(monthSection);
+    });
+  }
 }
 
 async function handleTargetSubmit(event) {
@@ -461,11 +534,30 @@ async function handleDeleteTarget(id) {
 }
 
 // ==========================================
-// HELPERS (Format Tanggal & Nama Hari Otomatis Bahasa Indonesia)
+// HELPERS (Format Tanggal & Nama Hari Bahasa Indonesia)
 // ==========================================
 
 function formatDateToISO(date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+function getMonthYearTitle(dateStr) {
+  if (!dateStr) return "Lainnya";
+  let cleanStr = String(dateStr).trim();
+  const months = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+
+  if (cleanStr.includes("/")) {
+    const d = new Date(cleanStr);
+    if (!isNaN(d.getTime())) return `${months[d.getMonth()]} ${d.getFullYear()}`;
+  } else if (cleanStr.includes("-")) {
+    const parts = cleanStr.split("-");
+    if (parts.length === 3) {
+      let y = parseInt(parts[0]);
+      let m = parseInt(parts[1]) - 1;
+      return `${months[m]} ${y}`;
+    }
+  }
+  return "Lainnya";
 }
 
 function formatDateFullIndo(dateStr) {
