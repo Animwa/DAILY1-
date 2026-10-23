@@ -3,7 +3,7 @@
  */
 
 // GANTI DENGAN URL DEPLOYMENT GOOGLE APPS SCRIPT ANDA
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyBU1WuKsHjYgyoGbdq3pdsEF_BFn5XG2-ZSCw27tzkcQXQHJjSuyiKWamx_vW4hiRd4g/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwDTCxOsYubaTAWunNxDHGufb6he0VxrNJhj_LctY5bULaNhHlWfMFdiC90LCHJvVPwSA/exec";
 
 let currentDailyActivities = [];
 
@@ -86,6 +86,9 @@ async function loadDailyActivities() {
 /**
  * Render Daftar Aktivitas Harian
  */
+/**
+ * Render Daftar Aktivitas Harian dengan Tampilan Kartu CRUD yang Rapi
+ */
 function renderDailyList(activities) {
   const container = document.getElementById("dailyContainer");
   const statTotal = document.getElementById("statTotalActivities");
@@ -108,28 +111,28 @@ function renderDailyList(activities) {
 
   sortedActivities.forEach(item => {
     const card = document.createElement("div");
-    card.className = "p-3.5 rounded-xl border border-slate-200/80 bg-white hover:border-slate-300 transition flex items-start justify-between gap-3 shadow-2xs";
+    card.className = "p-4 rounded-2xl border border-slate-200 bg-white hover:shadow-sm transition flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4";
 
     card.innerHTML = `
       <div class="space-y-1.5 w-full">
         <div class="flex items-center gap-2 flex-wrap">
-          <span class="text-xs font-bold text-slate-800 bg-slate-100 px-2.5 py-0.5 rounded-md border border-slate-200">
-            ⏰ ${item.startTime} - ${item.endTime}
+          <span class="text-xs font-bold text-slate-700 bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200 flex items-center gap-1">
+            ⏰ ${escapeHtml(item.startTime)} - ${escapeHtml(item.endTime)}
           </span>
-          <span class="text-xs font-medium text-blue-700 bg-blue-50 border border-blue-100 px-2.5 py-0.5 rounded-md">
+          <span class="text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-100 px-2.5 py-1 rounded-lg">
             ${escapeHtml(item.category)}
           </span>
         </div>
-        <h4 class="text-sm font-semibold text-slate-900">${escapeHtml(item.activity)}</h4>
-        ${item.notes && item.notes !== "-" ? `<p class="text-xs text-slate-500 italic bg-slate-50 p-2 rounded-lg border border-slate-100">${escapeHtml(item.notes)}</p>` : ""}
+        <h3 class="text-sm font-bold text-slate-900 mt-1">${escapeHtml(item.activity)}</h3>
+        ${item.notes && item.notes !== "-" ? `<p class="text-xs text-slate-600 bg-slate-50 p-2.5 rounded-xl border border-slate-100">📝 ${escapeHtml(item.notes)}</p>` : ""}
       </div>
 
-      <div class="flex items-center gap-1 shrink-0 pt-0.5">
-        <button onclick="openEditModal('${item.id}')" title="Edit" class="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-slate-50 rounded-lg transition cursor-pointer">
-          ✏️
+      <div class="flex items-center gap-1.5 shrink-0 self-end sm:self-center border-t sm:border-t-0 pt-2 sm:pt-0 w-full sm:w-auto justify-end">
+        <button onclick="openEditModal('${item.id}')" title="Edit" class="px-3 py-1.5 text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition cursor-pointer flex items-center gap-1">
+          ✏️ Edit
         </button>
-        <button onclick="handleDeleteActivity('${item.id}')" title="Hapus" class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-slate-50 rounded-lg transition cursor-pointer">
-          🗑️
+        <button onclick="handleDeleteActivity('${item.id}')" title="Hapus" class="px-3 py-1.5 text-xs font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg transition cursor-pointer flex items-center gap-1">
+          🗑️ Hapus
         </button>
       </div>
     `;
@@ -137,7 +140,6 @@ function renderDailyList(activities) {
     container.appendChild(card);
   });
 }
-
 /**
  * CREATE: Simpan Aktivitas Baru
  */
