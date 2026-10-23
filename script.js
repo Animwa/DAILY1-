@@ -2,8 +2,7 @@
  * FRONTEND CONTROLLER - Dashboard Aktivitas & Target
  */
 
-// URL DEPLOYMENT APPS SCRIPT ANDA
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwW41wS-Zrxq9QDpmDzmouoMYjT3QAo72MWS7FveqHDei68K9IcAy_hSVFkhFDoaYv7yw/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxl3rwFhja-GUaFjYrWvKdEmChOSEdR13EeOwxGLSrOLBkUCYLYUfSe5HSk---aaEFjaA/exec";
 
 let activeTab = "activities";
 let currentDailyActivities = [];
@@ -306,7 +305,10 @@ function renderTargetList(targets) {
     return;
   }
 
-  targets.forEach(item => {
+  // URUTKAN DARI TANGGAL TERDEKAT KE PALING JAUH
+  const sortedTargets = [...targets].sort((a, b) => new Date(a.targetDate) - new Date(b.targetDate));
+
+  sortedTargets.forEach(item => {
     const isDone = item.status === "Sudah";
     const card = document.createElement("div");
     card.className = `p-4 rounded-2xl border transition flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 ${
@@ -315,7 +317,7 @@ function renderTargetList(targets) {
 
     card.innerHTML = `
       <div class="space-y-1 w-full">
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-2 flex-wrap">
           <span class="text-xs font-semibold text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded-md border border-slate-200">
             📅 ${formatDateFullIndo(item.targetDate)}
           </span>
@@ -328,7 +330,10 @@ function renderTargetList(targets) {
         <h3 class="text-base font-bold text-slate-900 ${isDone ? "line-through text-slate-400" : ""}">${escapeHtml(item.title)}</h3>
       </div>
 
-      <div class="flex items-center gap-2 shrink-0 self-end sm:self-center">
+      <div class="flex items-center gap-1.5 shrink-0 self-end sm:self-center">
+        <button onclick="openEditTargetModal('${item.id}')" class="px-3 py-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition cursor-pointer">
+          ✏️ Edit
+        </button>
         <button onclick="toggleTargetStatus('${item.id}', '${isDone ? "Belum" : "Sudah"}')" class="px-3 py-1.5 text-xs font-bold rounded-lg transition cursor-pointer flex items-center gap-1 ${
           isDone ? "bg-amber-100 text-amber-800 hover:bg-amber-200" : "bg-emerald-600 text-white hover:bg-emerald-700"
         }">
@@ -376,6 +381,53 @@ async function handleTargetSubmit(event) {
     btn.disabled = false;
     btn.innerText = "+ Simpan Target";
     setTimeout(() => alertBox.classList.add("hidden"), 3500);
+  }
+}
+
+function openEditTargetModal(id) {
+  const item = currentTargets.find(t => String(t.id) === String(id));
+  if (!item) return;
+
+  document.getElementById("editTargetId").value = item.id;
+  document.getElementById("editTargetTitle").value = item.title;
+  document.getElementById("editTargetDate").value = item.targetDate;
+
+  document.getElementById("editTargetModal").classList.remove("hidden");
+}
+
+function closeEditTargetModal() {
+  document.getElementById("editTargetModal").classList.add("hidden");
+}
+
+async function handleEditTargetSubmit(event) {
+  event.preventDefault();
+  const btn = document.getElementById("btnSaveEditTarget");
+
+  const payload = {
+    id: document.getElementById("editTargetId").value,
+    title: document.getElementById("editTargetTitle").value,
+    targetDate: document.getElementById("editTargetDate").value
+  };
+
+  btn.disabled = true;
+  btn.innerText = "Menyimpan...";
+
+  try {
+    const res = await fetch(APPS_SCRIPT_URL, {
+      method: "POST",
+      body: JSON.stringify({ action: "updateTarget", data: payload })
+    });
+    const result = await res.json();
+
+    if (result.status === "success") {
+      closeEditTargetModal();
+      loadTargets();
+    } else alert("Gagal update target: " + result.message);
+  } catch (err) {
+    alert("Error: " + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerText = "Simpan Perubahan";
   }
 }
 
