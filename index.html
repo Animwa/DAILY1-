@@ -42,7 +42,6 @@
     <div id="tabDashboard" class="space-y-6">
       <div class="bg-gradient-to-r from-slate-900 to-blue-950 text-white rounded-2xl p-6 shadow-md border border-slate-800 flex flex-col md:flex-row items-center justify-between gap-4">
         <div>
-          <!-- Judul dengan pemicu klik 5x untuk mode admin rahasia -->
           <h1 class="text-xl font-bold cursor-pointer select-none" onclick="secretAdminTrigger()">Selamat Datang, Arifin! (1% Better Every Day)</h1>
           <p class="text-xs text-slate-300 mt-1">Catat hal penting agar selalu tampil di dashboard utama Anda.</p>
         </div>
@@ -53,30 +52,25 @@
       </div>
 
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        <!-- Form Tambah Catatan (Perlu Admin / Terkunci jika belum login) -->
         <section class="lg:col-span-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4 sticky top-6">
-          <div class="flex items-center justify-between">
-            <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
-              <span>📌</span> Buat Catatan Baru
-            </h2>
-            <span id="noteLockBadge" class="text-[10px] bg-red-100 text-red-700 font-bold px-2 py-0.5 rounded-md">Terkunci (Admin)</span>
-          </div>
+          <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
+            <span>📌</span> Buat Catatan Baru
+          </h2>
           <form id="noteForm" onsubmit="handleNoteSubmit(event)" class="space-y-3.5">
             <div>
               <label class="block text-xs font-semibold text-slate-600 mb-1">Nama Catatan</label>
-              <input type="text" id="noteTitle" dir="auto" required placeholder="Contoh: Rumus / Prinsip Stoic" class="w-full border border-slate-200 rounded-lg p-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+              <input type="text" id="noteTitle" dir="auto" required placeholder="Contoh: Rumus / Prinsip" class="w-full border border-slate-200 rounded-lg p-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
             </div>
             <div>
               <label class="block text-xs font-semibold text-slate-600 mb-1">Isi Catatan</label>
               <textarea id="noteContent" dir="auto" rows="4" required placeholder="Tulis detail catatan..." class="w-full border border-slate-200 rounded-lg p-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"></textarea>
             </div>
-            <button type="submit" id="btnSubmitNote" class="w-full bg-slate-300 text-slate-600 font-semibold py-2.5 rounded-lg text-sm transition cursor-pointer" disabled>
-              + Simpan Catatan (Login Admin Diperlukan)
+            <button type="submit" id="btnSubmitNote" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-lg text-sm transition cursor-pointer">
+              + Simpan Catatan
             </button>
           </form>
         </section>
 
-        <!-- Daftar Catatan Permanen -->
         <section class="lg:col-span-8 space-y-4">
           <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
             <span>📝</span> Catatan Permanen Dashboard
@@ -88,7 +82,6 @@
 
     <!-- ================= TAB 2: AKTIVITAS HARIAN ================= -->
     <div id="tabAktivitas" class="space-y-6 hidden">
-      <!-- Sub-Navbar Aktivitas -->
       <div class="flex items-center gap-2 border-b border-slate-200 pb-3">
         <button onclick="switchSubAktivitas('kegiatan')" id="subBtnKegiatan" class="px-4 py-2 rounded-xl text-xs font-bold bg-blue-600 text-white cursor-pointer transition">
           ✍️ Kelola Kegiatan (To-Do)
@@ -98,62 +91,26 @@
         </button>
       </div>
 
-      <!-- Sub 1: Kelola Kegiatan -->
       <div id="subContainerKegiatan" class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         <section class="lg:col-span-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4 sticky top-6">
-          <div class="flex items-center justify-between">
-            <h2 class="text-base font-bold text-slate-900">✍️ Tambah Kegiatan</h2>
-            <span id="actLockBadge" class="text-[10px] bg-red-100 text-red-700 font-bold px-2 py-0.5 rounded-md">Terkunci (Admin)</span>
-          </div>
+          <h2 class="text-base font-bold text-slate-900">✍️ Tambah Kegiatan</h2>
           <form id="activityForm" onsubmit="handleActivitySubmit(event)" class="space-y-3.5">
             <div>
-              <label class="block text-xs font-semibold text-slate-600 mb-1">Tanggal</label>
-              <input type="date" id="actDate" required class="w-full border border-slate-200 rounded-lg p-2 text-sm outline-none">
-            </div>
-            <div class="grid grid-cols-2 gap-2">
-              <div>
-                <label class="block text-xs font-semibold text-slate-600 mb-1">Mulai</label>
-                <input type="time" id="actStart" required class="w-full border border-slate-200 rounded-lg p-2 text-sm outline-none">
-              </div>
-              <div>
-                <label class="block text-xs font-semibold text-slate-600 mb-1">Selesai</label>
-                <input type="time" id="actEnd" required class="w-full border border-slate-200 rounded-lg p-2 text-sm outline-none">
-              </div>
-            </div>
-            <div>
-              <label class="block text-xs font-semibold text-slate-600 mb-1">Kategori</label>
-              <select id="actCategory" class="w-full border border-slate-200 rounded-lg p-2 text-sm outline-none bg-white">
-                <option value="🏠 Pekerjaan Rumah">🏠 Pekerjaan Rumah</option>
-                <option value="📖 Belajar">📖 Belajar</option>
-                <option value="☕ Istirahat">☕ Istirahat</option>
-                <option value="📚 Baca Buku">📚 Baca Buku</option>
-                <option value="🏃 Olahraga">🏃 Olahraga</option>
-                <option value="📖 Al-Quran">📖 Al-Quran</option>
-                <option value="🎓 Skripsi">🎓 Skripsi</option>
-                <option value="💼 Bekerja">💼 Bekerja</option>
-              </select>
-            </div>
-            <div>
               <label class="block text-xs font-semibold text-slate-600 mb-1">Nama Kegiatan</label>
-              <input type="text" id="actName" dir="auto" required placeholder="Contoh: Tilawah 1 Juz" class="w-full border border-slate-200 rounded-lg p-2 text-sm outline-none">
+              <input type="text" id="actName" dir="auto" required placeholder="Contoh: Membaca Al-Qur'an" class="w-full border border-slate-200 rounded-lg p-2 text-sm outline-none">
             </div>
-            <div>
-              <label class="block text-xs font-semibold text-slate-600 mb-1">Catatan</label>
-              <textarea id="actNotes" dir="auto" rows="2" placeholder="Catatan opsional..." class="w-full border border-slate-200 rounded-lg p-2 text-sm outline-none"></textarea>
-            </div>
-            <button type="submit" id="btnSubmitActivity" class="w-full bg-slate-300 text-slate-600 font-semibold py-2.5 rounded-lg text-sm transition cursor-pointer" disabled>
-              + Simpan Kegiatan (Login Admin Diperlukan)
+            <button type="submit" id="btnSubmitActivity" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-lg text-sm transition cursor-pointer">
+              + Simpan Kegiatan
             </button>
           </form>
         </section>
 
         <section class="lg:col-span-8 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-          <h2 class="text-base font-bold text-slate-900">📌 Daftar Kegiatan Rutin / Harian</h2>
+          <h2 class="text-base font-bold text-slate-900">📌 Daftar Kegiatan Harian</h2>
           <div id="todoActivitiesContainer" class="space-y-3"></div>
         </section>
       </div>
 
-      <!-- Sub 2: Riwayat Harian Grid -->
       <div id="subContainerRiwayat" class="space-y-4 hidden">
         <h2 class="text-base font-bold text-slate-900">📅 Riwayat Kegiatan Harian (Grid Berdasarkan Tanggal Penyelesaian)</h2>
         <div id="dailyGridContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
@@ -162,7 +119,6 @@
 
     <!-- ================= TAB 3: TARGET & SASARAN ================= -->
     <div id="tabTarget" class="space-y-6 hidden">
-      <!-- Sub-Navbar Target -->
       <div class="flex items-center gap-2 border-b border-slate-200 pb-3 overflow-x-auto">
         <button onclick="switchSubTarget('Usaha')" id="targetSubUsaha" class="px-4 py-2 rounded-xl text-xs font-bold bg-emerald-600 text-white cursor-pointer transition whitespace-nowrap">💼 Usaha</button>
         <button onclick="switchSubTarget('Kebutuhan')" id="targetSubKebutuhan" class="px-4 py-2 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 cursor-pointer transition whitespace-nowrap">🛒 Kebutuhan</button>
@@ -172,22 +128,19 @@
 
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         <section class="lg:col-span-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4 sticky top-6">
-          <div class="flex items-center justify-between">
-            <h2 id="targetFormTitle" class="text-base font-bold text-slate-900">🎯 Tambah Target Usaha</h2>
-            <span id="targetLockBadge" class="text-[10px] bg-red-100 text-red-700 font-bold px-2 py-0.5 rounded-md">Terkunci (Admin)</span>
-          </div>
+          <h2 id="targetFormTitle" class="text-base font-bold text-slate-900">🎯 Tambah Target Usaha</h2>
           <form id="targetForm" onsubmit="handleTargetSubmit(event)" class="space-y-3.5">
             <input type="hidden" id="targetCategoryInput" value="Usaha">
             <div>
               <label class="block text-xs font-semibold text-slate-600 mb-1">Nama Target</label>
-              <input type="text" id="targetTitle" dir="auto" required placeholder="Contoh: Sediakan modal awal..." class="w-full border border-slate-200 rounded-lg p-2 text-sm outline-none">
+              <input type="text" id="targetTitle" dir="auto" required placeholder="Contoh: Sediakan modal..." class="w-full border border-slate-200 rounded-lg p-2 text-sm outline-none">
             </div>
             <div>
               <label class="block text-xs font-semibold text-slate-600 mb-1">Waktu Tenggat (Deadline)</label>
               <input type="date" id="targetDeadline" required class="w-full border border-slate-200 rounded-lg p-2 text-sm outline-none">
             </div>
-            <button type="submit" id="btnSubmitTarget" class="w-full bg-slate-300 text-slate-600 font-semibold py-2.5 rounded-lg text-sm transition cursor-pointer" disabled>
-              + Simpan Target (Login Admin Diperlukan)
+            <button type="submit" id="btnSubmitTarget" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 rounded-lg text-sm transition cursor-pointer">
+              + Simpan Target
             </button>
           </form>
         </section>
@@ -204,17 +157,17 @@
 
   </div>
 
-  <!-- Modal Login Admin Tersembunyi / PIN -->
+  <!-- Modal Login Admin Tersembunyi (Tanpa Menampilkan PIN) -->
   <div id="loginModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 z-50 hidden">
     <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-xl space-y-4">
       <div class="flex items-center justify-between border-b border-slate-100 pb-3">
         <h3 class="font-bold text-slate-900 text-base">🔐 Autentikasi Admin</h3>
         <button onclick="closeLoginModal()" class="text-slate-400 cursor-pointer">✕</button>
       </div>
-      <p class="text-xs text-slate-500">Masukkan PIN Admin untuk membuka akses Tambah, Edit, dan Hapus.</p>
+      <p class="text-xs text-slate-500">Masukkan kode akses admin untuk membuka izin Tambah, Edit, dan Hapus.</p>
       <form onsubmit="verifyAdminPin(event)" class="space-y-3">
         <div>
-          <input type="password" id="adminPinInput" required placeholder="PIN (Default: 1234)" class="w-full border border-slate-200 rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+          <input type="password" id="adminPinInput" required placeholder="Masukkan kode akses..." class="w-full border border-slate-200 rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500">
         </div>
         <div class="flex gap-2 pt-2">
           <button type="button" onclick="closeLoginModal()" class="w-1/2 py-2 text-xs font-semibold text-slate-600 border border-slate-200 rounded-lg">Batal</button>
