@@ -2,12 +2,13 @@
  * FRONTEND LOGIC - 1% Daily Habit & Activity Tracker
  */
 
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxJXjJWOL5LRdFKeHHkxR8R8m8ihrajEgsTH23odMy2HI6yVxH1JDoXEPggNchPTuwG3w/exec"; 
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwwcv9UkOeoTI-XmNtjtHkmW1cped4UkncZgHohSPSb0jMI2VcVr1BeQSSmQkJwi0cG_g/exec"; 
 
 let appData = { notes: [], activities: [], targets: [] };
 let isAdmin = false;
 let currentTargetSub = "Usaha";
 let secretClickCount = 0;
+let currentSelectedDate = "";
 
 // Proteksi DevTools & Klik Kanan
 document.addEventListener('keydown', e => {
@@ -32,10 +33,32 @@ document.addEventListener('keydown', e => {
 
 window.onload = () => {
   const today = new Date().toISOString().split('T')[0];
+  currentSelectedDate = today;
+  
+  let dateInput = document.getElementById('selectedActivityDate');
+  if (dateInput) dateInput.value = today;
+  
   let targetInput = document.getElementById('targetDeadline');
   if (targetInput) targetInput.value = today;
+
+  updateDayName(today);
   fetchAllData();
 };
+
+function onDateChanged() {
+  let dateInput = document.getElementById('selectedActivityDate');
+  currentSelectedDate = dateInput.value;
+  updateDayName(currentSelectedDate);
+  renderActivities();
+}
+
+function updateDayName(dateStr) {
+  const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+  let d = new Date(dateStr);
+  let dayName = days[d.getDay()];
+  let dayBadge = document.getElementById('selectedDayName');
+  if (dayBadge) dayBadge.innerText = dayName;
+}
 
 function secretAdminTrigger() {
   secretClickCount++;
@@ -53,7 +76,6 @@ function closeLoginModal() {
   document.getElementById('loginModal').classList.add('hidden');
 }
 
-// Verifikasi PIN langsung memeriksa sel A2 dari sheet Settings di backend
 async function verifyAdminPin(e) {
   e.preventDefault();
   const pin = document.getElementById('adminPinInput').value;
@@ -169,7 +191,7 @@ function renderNotes() {
   `).join('');
 }
 
-// --- RENDER ACTIVITIES (TANPA CONTOH TEKS PADA PLACEHOLDER) ---
+// --- RENDER ACTIVITIES DENGAN LOGIKA RESET HARIAN ---
 function renderActivities() {
   let todoContainer = document.getElementById('todoActivitiesContainer');
   let todos = appData.activities;
@@ -179,24 +201,33 @@ function renderActivities() {
     return;
   }
 
-  todoContainer.innerHTML = todos.map(a => `
-    <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
-      <div class="flex items-center justify-between">
-        <h4 class="font-bold text-sm text-slate-800" dir="auto">${escapeHtml(a.activity)}</h4>
-        <div class="flex items-center gap-2">
-          <button onclick="completeActivity('${a.id}')" class="px-3 py-1.5 ${a.status === 'Selesai' ? 'bg-amber-500' : 'bg-emerald-600'} hover:opacity-90 text-white rounded-lg text-xs font-semibold cursor-pointer">
-            ${a.status === 'Selesai' ? 'Batalkan' : 'Tandai Selesai'}
-          </button>
-          ${isAdmin ? `<button onclick="deleteActivity('${a.id}')" class="text-red-500 text-xs px-2 py-1 cursor-pointer">Hapus</button>` : ''}
+  // Cek apakah tanggal yang dipilih berbeda dari hari ini (reset harian otomatis untuk hari baru)
+  const todayStr = new Date().toISOString().split('T')[0];
+  let isDifferentDay = (currentSelectedDate !== todayStr);
+
+  todoContainer.innerHTML = todos.map(a => {
+    // Jika beda hari, anggap status belum selesai & catatan kosong untuk diisi di tanggal tersebut
+    let displayStatus = isDifferentDay ? "Belum" : a.status;
+    let displayNotes = isDifferentDay ? "" : (a.notes || "");
+
+    return `
+      <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+        <div class="flex items-center justify-between">
+          <h4 class="font-bold text-sm text-slate-800" dir="auto">${escapeHtml(a.activity)}</h4>
+          <div class="flex items-center gap-2">
+            <button onclick="completeActivityWithNotes('${a.id}')" class="px-3 py-1.5 ${displayStatus === 'Selesai' ? 'bg-amber-500' : 'bg-emerald-600'} hover:opacity-90 text-white rounded-lg text-xs font-semibold cursor-pointer">
+              ${displayStatus === 'Selesai' ? 'Batalkan' : 'Tandai Selesai'}
+            </button>
+            ${isAdmin ? `<button onclick="deleteActivity('${a.id}')" class="text-red-500 text-xs px-2 py-1 cursor-pointer">Hapus</button>` : ''}
+          </div>
+        </div>
+        <!-- Kolom Isian Catatan (Otomatis tersimpan & di-reset per tanggal) -->
+        <div class="pt-1">
+          <input type="text" id="actNoteInput_${a.id}" dir="auto" value="${escapeHtml(displayNotes)}" placeholder="Isi catatan kegiatan hari ini..." class="w-full border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs bg-white outline-none focus:ring-1 focus:ring-blue-500">
         </div>
       </div>
-      <!-- Kolom Isian Catatan Kegiatan (Bersih tanpa contoh teks) -->
-      <div class="flex items-center gap-2 pt-1">
-        <input type="text" id="actNoteInput_${a.id}" dir="auto" value="${escapeHtml(a.notes || '')}" placeholder="Tambah catatan kegiatan..." class="w-full border border-slate-200 rounded-lg px-2.5 py-1 text-xs bg-white outline-none focus:ring-1 focus:ring-blue-500">
-        <button onclick="saveActivityNotes('${a.id}')" class="px-3 py-1 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-semibold rounded-lg cursor-pointer whitespace-nowrap">Simpan Catatan</button>
-      </div>
-    </div>
-  `).join('');
+    `;
+  }).join('');
 }
 
 // --- RENDER RIWAYAT HARIAN GRID ---
@@ -275,11 +306,10 @@ async function handleNoteSubmit(e) {
 async function handleActivitySubmit(e) {
   e.preventDefault();
   if (!isAdmin) return alert("Akses ditolak. Masuk sebagai admin terlebih dahulu.");
-  const today = new Date().toISOString().split('T')[0];
   let payload = {
     action: "addActivity",
     data: {
-      date: today,
+      date: currentSelectedDate,
       activity: document.getElementById('actName').value
     }
   };
@@ -304,15 +334,17 @@ async function handleTargetSubmit(e) {
   fetchAllData();
 }
 
-// --- USER ACTIONS ---
-async function completeActivity(id) {
-  await sendPost({ action: "completeActivity", id: id });
-  fetchAllData();
-}
-
-async function saveActivityNotes(id) {
-  let notesVal = document.getElementById('actNoteInput_' + id).value;
-  await sendPost({ action: "updateActivityNotes", id: id, notes: notesVal });
+// --- USER ACTIONS (MENYIMPAN CATATAN & MENANDAI SELESAI SEKALIGUS) ---
+async function completeActivityWithNotes(id) {
+  let notesInput = document.getElementById('actNoteInput_' + id);
+  let notesVal = notesInput ? notesInput.value : "";
+  
+  await sendPost({ 
+    action: "completeActivity", 
+    id: id, 
+    notes: notesVal, 
+    selectedDate: currentSelectedDate 
+  });
   fetchAllData();
 }
 
