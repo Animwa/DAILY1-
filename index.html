@@ -3,336 +3,549 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dashboard Aktivitas & Target</title>
+  <title>Dashboard Produktivitas Terpadu</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    body { font-family: 'Plus Jakarta Sans', sans-serif; user-select: none; }
+    input, textarea { user-select: text; }
   </style>
 </head>
-<body class="bg-slate-100 min-h-screen text-slate-800 p-4 md:p-8">
+<body class="bg-slate-100 min-h-screen text-slate-800 p-4 md:p-8" oncontextmenu="return false;">
 
   <div class="max-w-6xl mx-auto space-y-6">
     
-    <!-- Navbar Navigasi Dashboard -->
-    <nav class="bg-white p-2 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between gap-2">
-      <div class="flex items-center gap-2">
-        <button id="navBtnActivities" onclick="switchTab('activities')" class="px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition cursor-pointer bg-blue-600 text-white shadow-xs">
-          📋 Dashboard Aktivitas
+    <!-- Navbar Utama -->
+    <nav class="bg-white p-2 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3">
+      <div class="flex items-center gap-2 w-full sm:w-auto overflow-x-auto">
+        <button onclick="switchMainTab('dashboard')" id="navMainDashboard" class="px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition cursor-pointer bg-blue-600 text-white shadow-xs whitespace-nowrap">
+          🏠 Dashboard & Catatan
         </button>
-        <button id="navBtnTargets" onclick="switchTab('targets')" class="px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition cursor-pointer bg-slate-100 text-slate-600 hover:bg-slate-200">
-          🎯 Dashboard Target
+        <button onclick="switchMainTab('aktivitas')" id="navMainAktivitas" class="px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition cursor-pointer bg-slate-100 text-slate-600 hover:bg-slate-200 whitespace-nowrap">
+          📋 Aktivitas Harian
+        </button>
+        <button onclick="switchMainTab('target')" id="navMainTarget" class="px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition cursor-pointer bg-slate-100 text-slate-600 hover:bg-slate-200 whitespace-nowrap">
+          🎯 Target & Sasaran
         </button>
       </div>
-      <button onclick="refreshCurrentTab()" class="bg-slate-50 border border-slate-200 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-100 transition flex items-center gap-1.5 cursor-pointer">
-        🔄 Segarkan Data
-      </button>
+      <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
+        <span id="adminBadge" class="hidden bg-amber-100 text-amber-800 text-[10px] font-bold px-2 py-1 rounded-md">Mode Admin Aktif</span>
+        <button onclick="fetchAllData()" class="bg-slate-50 border border-slate-200 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-100 transition flex items-center gap-1.5 cursor-pointer">
+          🔄 Sinkronisasi
+        </button>
+      </div>
     </nav>
 
-    <!-- ================= TAB 1: DASHBOARD AKTIVITAS HARIAN ================= -->
-    <div id="tabActivities" class="space-y-6">
-      
-      <!-- Ringkasan Aktivitas -->
-      <section class="bg-slate-900 text-white rounded-2xl p-5 shadow-md border border-slate-800 flex flex-col md:flex-row items-center justify-between gap-4">
-        <div class="flex items-center gap-3">
-          <div class="p-3 bg-blue-600/30 border border-blue-500/30 rounded-xl text-xl">📅</div>
-          <div>
-            <span class="text-xs uppercase tracking-wider text-slate-400 font-semibold block">Tanggal Dipilih</span>
-            <div class="flex items-center gap-2">
-              <input type="date" id="dashboardFilterDate" onchange="loadDailyActivities()" class="bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1 text-sm text-white font-bold outline-none focus:border-blue-500">
-              <span id="selectedDateText" class="text-sm font-semibold text-blue-300"></span>
-            </div>
-          </div>
-        </div>
+    <!-- ========================================================== -->
+    <!-- TAB 1: DASHBOARD & CATATAN PERMANEN                        -->
+    <!-- ========================================================== -->
+    <div id="tabDashboard" class="space-y-6">
+      <div class="bg-gradient-to-r from-slate-900 to-blue-950 text-white rounded-2xl p-6 shadow-md border border-slate-800 flex flex-col md:flex-row items-center justify-between gap-4">
         <div>
-          <span class="text-xs text-slate-400 block text-center md:text-right">Total Kegiatan</span>
-          <span id="statTotalActivities" class="text-xl font-bold text-white block text-center md:text-right">0</span>
+          <h1 class="text-xl font-bold cursor-pointer" onclick="secretAdminTrigger()">Selamat Datang, Arifin!</h1>
+          <p class="text-xs text-slate-300 mt-1">Catat hal penting agar selalu tampil di dashboard utama Anda.</p>
         </div>
-      </section>
+        <div class="text-right">
+          <span class="text-xs text-slate-400 block">Total Catatan Aktif</span>
+          <span id="statTotalNotes" class="text-2xl font-bold text-blue-400">0</span>
+        </div>
+      </div>
 
-      <!-- Layout Form & Aktivitas -->
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        
-        <!-- Form Tambah Aktivitas -->
+        <!-- Form Tambah Catatan -->
         <section class="lg:col-span-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4 sticky top-6">
           <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
-            <span>✍️</span> Tambah Kegiatan
+            <span>📌</span> Buat Catatan Baru
           </h2>
+          <form id="noteForm" onsubmit="handleNoteSubmit(event)" class="space-y-3.5">
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Nama Catatan</label>
+              <input type="text" id="noteTitle" dir="auto" required placeholder="Contoh: Rumus Penting / Link Penting" class="w-full border border-slate-200 rounded-lg p-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Isi Catatan</label>
+              <textarea id="noteContent" dir="auto" rows="4" required placeholder="Tulis detail catatan di sini..." class="w-full border border-slate-200 rounded-lg p-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+            </div>
+            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-lg text-sm transition shadow-sm cursor-pointer">
+              + Simpan Catatan
+            </button>
+          </form>
+        </section>
 
-          <form id="activityForm" onsubmit="handleFormSubmit(event)" class="space-y-3.5">
+        <!-- Daftar Catatan yang Selalu Tampil -->
+        <section class="lg:col-span-8 space-y-4">
+          <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
+            <span>📝</span> Catatan Permanen Dashboard
+          </h2>
+          <div id="notesContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Rendered by JS -->
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <!-- ========================================================== -->
+    <!-- TAB 2: AKTIVITAS HARIAN (Sub-nav: Kegiatan & Riwayat)     -->
+    <!-- ========================================================== -->
+    <div id="tabAktivitas" class="space-y-6 hidden">
+      <!-- Sub-Navbar Aktivitas -->
+      <div class="flex items-center gap-2 border-b border-slate-200 pb-3">
+        <button onclick="switchSubAktivitas('kegiatan')" id="subBtnKegiatan" class="px-4 py-2 rounded-xl text-xs font-bold bg-blue-600 text-white cursor-pointer transition">
+          ✍️ Kelola Kegiatan (To-Do)
+        </button>
+        <button onclick="switchSubAktivitas('riwayat')" id="subBtnRiwayat" class="px-4 py-2 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 cursor-pointer transition">
+          📊 Riwayat Harian (Grid)
+        </button>
+      </div>
+
+      <!-- Sub 1: Kegiatan -->
+      <div id="subContainerKegiatan" class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        <!-- Form Kegiatan -->
+        <section class="lg:col-span-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4 sticky top-6">
+          <h2 class="text-base font-bold text-slate-900">✍️ Tambah Kegiatan</h2>
+          <form id="activityForm" onsubmit="handleActivitySubmit(event)" class="space-y-3.5">
             <div>
               <label class="block text-xs font-semibold text-slate-600 mb-1">Tanggal</label>
-              <input type="date" id="inputDate" required class="w-full border border-slate-200 rounded-lg p-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+              <input type="date" id="actDate" required class="w-full border border-slate-200 rounded-lg p-2 text-sm outline-none">
             </div>
-
-            <div class="grid grid-cols-2 gap-2.5">
+            <div class="grid grid-cols-2 gap-2">
               <div>
-                <label class="block text-xs font-semibold text-slate-600 mb-1">Jam Mulai</label>
-                <div class="flex items-center gap-1">
-                  <select id="startHour" class="w-1/2 border border-slate-200 rounded-lg p-2 text-xs font-medium bg-slate-50 outline-none"></select>
-                  <span class="font-bold text-slate-400">:</span>
-                  <select id="startMinute" class="w-1/2 border border-slate-200 rounded-lg p-2 text-xs font-medium bg-slate-50 outline-none"></select>
-                </div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Mulai</label>
+                <input type="time" id="actStart" required class="w-full border border-slate-200 rounded-lg p-2 text-sm outline-none">
               </div>
               <div>
-                <label class="block text-xs font-semibold text-slate-600 mb-1">Jam Selesai</label>
-                <div class="flex items-center gap-1">
-                  <select id="endHour" class="w-1/2 border border-slate-200 rounded-lg p-2 text-xs font-medium bg-slate-50 outline-none"></select>
-                  <span class="font-bold text-slate-400">:</span>
-                  <select id="endMinute" class="w-1/2 border border-slate-200 rounded-lg p-2 text-xs font-medium bg-slate-50 outline-none"></select>
-                </div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Selesai</label>
+                <input type="time" id="actEnd" required class="w-full border border-slate-200 rounded-lg p-2 text-sm outline-none">
               </div>
             </div>
-
             <div>
               <label class="block text-xs font-semibold text-slate-600 mb-1">Kategori</label>
-              <select id="inputCategory" class="w-full border border-slate-200 rounded-lg p-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+              <select id="actCategory" class="w-full border border-slate-200 rounded-lg p-2 text-sm outline-none bg-white">
                 <option value="🏠 Pekerjaan Rumah">🏠 Pekerjaan Rumah</option>
                 <option value="📖 Belajar">📖 Belajar</option>
                 <option value="☕ Istirahat">☕ Istirahat</option>
                 <option value="📚 Baca Buku">📚 Baca Buku</option>
                 <option value="🏃 Olahraga">🏃 Olahraga</option>
                 <option value="📖 Al-Quran">📖 Al-Quran</option>
-                <option value="📌 13 Pr">📌 13 Pr</option>
-                <option value="🤲 Doa-doa">🤲 Doa-doa</option>
-                <option value="💼 Bekerja - pendapatan">💼 Bekerja - pendapatan</option>
-                <option value="🎓 Progres skripsi">🎓 Progres skripsi</option>
+                <option value="🎓 Skripsi">🎓 Skripsi</option>
+                <option value="💼 Bekerja">💼 Bekerja</option>
               </select>
             </div>
-
             <div>
               <label class="block text-xs font-semibold text-slate-600 mb-1">Nama Kegiatan</label>
-              <input type="text" id="inputActivity" required placeholder="Contoh: Menyelesaikan Bab 2 Skripsi" class="w-full border border-slate-200 rounded-lg p-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+              <input type="text" id="actName" dir="auto" required placeholder="Contoh: Bimbingan Bab 3" class="w-full border border-slate-200 rounded-lg p-2 text-sm outline-none">
             </div>
-
             <div>
               <label class="block text-xs font-semibold text-slate-600 mb-1">Catatan</label>
-              <textarea id="inputNotes" rows="2" placeholder="Detail tambahan (opsional)" class="w-full border border-slate-200 rounded-lg p-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+              <textarea id="actNotes" dir="auto" rows="2" placeholder="Catatan opsional..." class="w-full border border-slate-200 rounded-lg p-2 text-sm outline-none"></textarea>
             </div>
-
-            <button type="submit" id="btnSubmitActivity" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-lg text-sm transition shadow-sm cursor-pointer">
+            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-lg text-sm transition cursor-pointer">
               + Simpan Kegiatan
             </button>
-
-            <div id="formAlert" class="hidden text-xs text-center p-2 rounded-lg font-medium"></div>
           </form>
         </section>
 
-        <!-- List Aktivitas Harian -->
+        <!-- List To-Do Kegiatan Belum Selesai -->
         <section class="lg:col-span-8 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-          <div class="flex items-center justify-between border-b border-slate-100 pb-3">
-            <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
-              <span>📌</span> Kegiatan Yang Sudah Dilakukan
-            </h2>
-            <p id="dailyDateLabel" class="text-xs text-slate-400"></p>
+          <h2 class="text-base font-bold text-slate-900">📌 Daftar Kegiatan Yang Harus Dikerjakan</h2>
+          <div id="todoActivitiesContainer" class="space-y-3">
+            <!-- Rendered by JS -->
           </div>
-
-          <div id="dailyLoading" class="text-center py-14 text-sm text-slate-400">
-            <div class="animate-spin inline-block w-6 h-6 border-2 border-current border-t-transparent text-blue-600 rounded-full mb-2"></div>
-            <p>Memuat aktivitas harian...</p>
-          </div>
-
-          <div id="dailyContainer" class="space-y-3 hidden"></div>
         </section>
+      </div>
 
+      <!-- Sub 2: Riwayat Harian (Grid per Hari) -->
+      <div id="subContainerRiwayat" class="space-y-4 hidden">
+        <h2 class="text-base font-bold text-slate-900">📅 Riwayat Harian (Apa saja yang sudah diselesaikan)</h2>
+        <div id="dailyGridContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Rendered by JS -->
+        </div>
       </div>
     </div>
 
-    <!-- ================= TAB 2: DASHBOARD TARGET ================= -->
-    <div id="tabTargets" class="space-y-6 hidden">
-      
-      <!-- Ringkasan Target -->
-      <section class="bg-slate-900 text-white rounded-2xl p-5 shadow-md border border-slate-800 flex items-center justify-between">
-        <div class="flex items-center gap-3">
-          <div class="p-3 bg-emerald-600/30 border border-emerald-500/30 rounded-xl text-xl">🎯</div>
-          <div>
-            <h2 class="text-lg font-bold text-white">Target & Sasaran Anda</h2>
-            <p class="text-xs text-slate-400">Kelola target aktif dan riwayat target yang telah selesai.</p>
-          </div>
-        </div>
-        <div class="flex items-center gap-6">
-          <div class="text-right">
-            <span class="text-xs text-slate-400 block">Aktif</span>
-            <span id="statActiveTargets" class="text-xl font-bold text-amber-400">0</span>
-          </div>
-          <div class="text-right">
-            <span class="text-xs text-slate-400 block">Selesai</span>
-            <span id="statCompletedTargets" class="text-xl font-bold text-emerald-400">0</span>
-          </div>
-        </div>
-      </section>
+    <!-- ========================================================== -->
+    <!-- TAB 3: TARGET (Sub-nav: Usaha, Kebutuhan, Kewajiban, Skripsi) -->
+    <!-- ========================================================== -->
+    <div id="tabTarget" class="space-y-6 hidden">
+      <!-- Sub-Navbar Target -->
+      <div class="flex items-center gap-2 border-b border-slate-200 pb-3 overflow-x-auto">
+        <button onclick="switchSubTarget('Usaha')" id="targetSubUsaha" class="px-4 py-2 rounded-xl text-xs font-bold bg-emerald-600 text-white cursor-pointer transition whitespace-nowrap">💼 Usaha</button>
+        <button onclick="switchSubTarget('Kebutuhan')" id="targetSubKebutuhan" class="px-4 py-2 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 cursor-pointer transition whitespace-nowrap">🛒 Kebutuhan</button>
+        <button onclick="switchSubTarget('Kewajiban')" id="targetSubKewajiban" class="px-4 py-2 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 cursor-pointer transition whitespace-nowrap">📌 Kewajiban</button>
+        <button onclick="switchSubTarget('Skripsi')" id="targetSubSkripsi" class="px-4 py-2 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 cursor-pointer transition whitespace-nowrap">🎓 Skripsi</button>
+      </div>
 
-      <!-- Layout Form & List Target -->
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        
         <!-- Form Tambah Target -->
         <section class="lg:col-span-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4 sticky top-6">
-          <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
-            <span>🎯</span> Tambah Target Baru
-          </h2>
-
+          <h2 id="targetFormTitle" class="text-base font-bold text-slate-900">🎯 Tambah Target Usaha</h2>
           <form id="targetForm" onsubmit="handleTargetSubmit(event)" class="space-y-3.5">
+            <input type="hidden" id="targetCategoryInput" value="Usaha">
             <div>
               <label class="block text-xs font-semibold text-slate-600 mb-1">Nama Target</label>
-              <input type="text" id="targetTitle" required placeholder="Contoh: Lulus Sidang Skripsi" class="w-full border border-slate-200 rounded-lg p-2 text-sm outline-none focus:ring-2 focus:ring-emerald-500">
+              <input type="text" id="targetTitle" dir="auto" required placeholder="Contoh: Sediakan modal awal..." class="w-full border border-slate-200 rounded-lg p-2 text-sm outline-none">
             </div>
-
             <div>
-              <label class="block text-xs font-semibold text-slate-600 mb-1">Tanggal Pelaksanaan</label>
-              <input type="date" id="targetDate" required class="w-full border border-slate-200 rounded-lg p-2 text-sm outline-none focus:ring-2 focus:ring-emerald-500">
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Waktu Tenggat (Deadline)</label>
+              <input type="date" id="targetDeadline" required class="w-full border border-slate-200 rounded-lg p-2 text-sm outline-none">
             </div>
-
-            <button type="submit" id="btnSubmitTarget" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 rounded-lg text-sm transition shadow-sm cursor-pointer">
+            <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 rounded-lg text-sm transition cursor-pointer">
               + Simpan Target
             </button>
-
-            <div id="targetFormAlert" class="hidden text-xs text-center p-2 rounded-lg font-medium"></div>
           </form>
         </section>
 
-        <!-- Container List Target (Terpisah: Belum & Sudah) -->
-        <section class="lg:col-span-8 space-y-6">
-          
-          <div id="targetLoading" class="bg-white p-5 rounded-2xl border border-slate-200 text-center py-14 text-sm text-slate-400">
-            <div class="animate-spin inline-block w-6 h-6 border-2 border-current border-t-transparent text-emerald-600 rounded-full mb-2"></div>
-            <p>Memuat daftar target...</p>
+        <!-- List Target Berdasarkan Kategori -->
+        <section class="lg:col-span-8 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+          <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+            <h2 id="targetListTitle" class="text-base font-bold text-slate-900">Daftar Target Usaha</h2>
+            <span id="targetCountBadge" class="bg-emerald-100 text-emerald-800 text-xs font-bold px-2.5 py-0.5 rounded-full">0</span>
           </div>
-
-          <!-- Section 1: Target Belum Dilaksanakan -->
-          <div id="activeTargetSection" class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4 hidden">
-            <div class="border-b border-slate-100 pb-3 flex items-center justify-between">
-              <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
-                <span>⏳</span> Target Belum Dilaksanakan
-              </h2>
-              <span id="badgeActiveCount" class="bg-amber-100 text-amber-800 text-xs font-bold px-2.5 py-0.5 rounded-full">0</span>
-            </div>
-            <div id="activeTargetContainer" class="space-y-3"></div>
+          <div id="targetContainer" class="space-y-3">
+            <!-- Rendered by JS -->
           </div>
-
-          <!-- Section 2: Target Sudah Dilaksanakan (Dikelompokkan Per Bulan) -->
-          <div id="completedTargetSection" class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4 hidden">
-            <div class="border-b border-slate-100 pb-3 flex items-center justify-between">
-              <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
-                <span>✅</span> Riwayat Target Terlaksana (Per Bulan)
-              </h2>
-              <span id="badgeCompletedCount" class="bg-emerald-100 text-emerald-800 text-xs font-bold px-2.5 py-0.5 rounded-full">0</span>
-            </div>
-            <div id="completedTargetContainer" class="space-y-6"></div>
-          </div>
-
         </section>
-
       </div>
     </div>
 
   </div>
 
-  <!-- Modal Edit Aktivitas -->
-  <div id="editModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 z-50 hidden">
-    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4 border border-slate-100">
+  <!-- Modal Edit Catatan (Admin Only) -->
+  <div id="editNoteModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 z-50 hidden">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4">
       <div class="flex items-center justify-between border-b border-slate-100 pb-3">
-        <h3 class="font-bold text-slate-900 text-base">✏️ Edit Aktivitas</h3>
-        <button onclick="closeEditModal()" class="text-slate-400 hover:text-slate-600 text-lg cursor-pointer">✕</button>
+        <h3 class="font-bold text-slate-900 text-base">✏️ Edit Catatan (Admin)</h3>
+        <button onclick="closeEditNoteModal()" class="text-slate-400 cursor-pointer">✕</button>
       </div>
-
-      <form id="editForm" onsubmit="handleEditSubmit(event)" class="space-y-3">
-        <input type="hidden" id="editId">
+      <form id="editNoteForm" onsubmit="handleEditNoteSubmit(event)" class="space-y-3">
+        <input type="hidden" id="editNoteId">
         <div>
-          <label class="block text-xs font-semibold text-slate-600 mb-1">Tanggal</label>
-          <input type="date" id="editDate" required class="w-full border border-slate-200 rounded-lg p-2 text-sm outline-none">
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Nama Catatan</label>
+          <input type="text" id="editNoteTitle" dir="auto" required class="w-full border border-slate-200 rounded-lg p-2 text-sm outline-none">
         </div>
-
-        <div class="grid grid-cols-2 gap-2.5">
-          <div>
-            <label class="block text-xs font-semibold text-slate-600 mb-1">Jam Mulai</label>
-            <div class="flex items-center gap-1">
-              <select id="editStartHour" class="w-1/2 border border-slate-200 rounded-lg p-2 text-xs font-medium outline-none"></select>
-              <span class="font-bold text-slate-400">:</span>
-              <select id="editStartMinute" class="w-1/2 border border-slate-200 rounded-lg p-2 text-xs font-medium outline-none"></select>
-            </div>
-          </div>
-          <div>
-            <label class="block text-xs font-semibold text-slate-600 mb-1">Jam Selesai</label>
-            <div class="flex items-center gap-1">
-              <select id="editEndHour" class="w-1/2 border border-slate-200 rounded-lg p-2 text-xs font-medium outline-none"></select>
-              <span class="font-bold text-slate-400">:</span>
-              <select id="editEndMinute" class="w-1/2 border border-slate-200 rounded-lg p-2 text-xs font-medium outline-none"></select>
-            </div>
-          </div>
-        </div>
-
         <div>
-          <label class="block text-xs font-semibold text-slate-600 mb-1">Kategori</label>
-          <select id="editCategory" class="w-full border border-slate-200 rounded-lg p-2 text-sm outline-none bg-white">
-            <option value="🏠 Pekerjaan Rumah">🏠 Pekerjaan Rumah</option>
-            <option value="📖 Belajar">📖 Belajar</option>
-            <option value="☕ Istirahat">☕ Istirahat</option>
-            <option value="📚 Baca Buku">📚 Baca Buku</option>
-            <option value="🏃 Olahraga">🏃 Olahraga</option>
-            <option value="📖 Al-Quran">📖 Al-Quran</option>
-            <option value="📌 13 Pr">📌 13 Pr</option>
-            <option value="🤲 Doa-doa">🤲 Doa-doa</option>
-            <option value="💼 Bekerja - pendapatan">💼 Bekerja - pendapatan</option>
-            <option value="🎓 Progres skripsi">🎓 Progres skripsi</option>
-          </select>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Isi Catatan</label>
+          <textarea id="editNoteContent" dir="auto" rows="4" required class="w-full border border-slate-200 rounded-lg p-2 text-sm outline-none"></textarea>
         </div>
-
-        <div>
-          <label class="block text-xs font-semibold text-slate-600 mb-1">Nama Kegiatan</label>
-          <input type="text" id="editActivity" required class="w-full border border-slate-200 rounded-lg p-2 text-sm outline-none">
-        </div>
-
-        <div>
-          <label class="block text-xs font-semibold text-slate-600 mb-1">Catatan</label>
-          <textarea id="editNotes" rows="2" class="w-full border border-slate-200 rounded-lg p-2 text-sm outline-none"></textarea>
-        </div>
-
-        <div class="flex items-center gap-2 pt-2">
-          <button type="button" onclick="closeEditModal()" class="w-1/2 py-2 text-xs font-semibold text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 cursor-pointer">
-            Batal
-          </button>
-          <button type="submit" id="btnSaveEdit" class="w-1/2 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg cursor-pointer">
-            Simpan Perubahan
-          </button>
+        <div class="flex gap-2 pt-2">
+          <button type="button" onclick="closeEditNoteModal()" class="w-1/2 py-2 text-xs font-semibold text-slate-600 border border-slate-200 rounded-lg">Batal</button>
+          <button type="submit" class="w-1/2 py-2 text-xs font-semibold text-white bg-blue-600 rounded-lg">Simpan</button>
         </div>
       </form>
     </div>
   </div>
 
-  <!-- Modal Edit Target -->
-  <div id="editTargetModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 z-50 hidden">
-    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4 border border-slate-100">
-      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
-        <h3 class="font-bold text-slate-900 text-base">✏️ Edit Target</h3>
-        <button onclick="closeEditTargetModal()" class="text-slate-400 hover:text-slate-600 text-lg cursor-pointer">✕</button>
-      </div>
+  <script>
+    // --- KODE SCRIPT FRONTEND ---
+    const SCRIPT_URL = "URL_WEB_APP_APPS_SCRIPT_ANDA_DISINI"; // Ganti dengan URL deployment Web App Anda
+    let appData = { notes: [], activities: [], targets: [] };
+    let isAdmin = false;
+    let currentTargetSub = "Usaha";
 
-      <form id="editTargetForm" onsubmit="handleEditTargetSubmit(event)" class="space-y-3.5">
-        <input type="hidden" id="editTargetId">
-        <div>
-          <label class="block text-xs font-semibold text-slate-600 mb-1">Nama Target</label>
-          <input type="text" id="editTargetTitle" required class="w-full border border-slate-200 rounded-lg p-2 text-sm outline-none focus:ring-2 focus:ring-emerald-500">
+    // Proteksi DevTools Dasar
+    document.addEventListener('keydown', e => {
+      if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && ['I','J','C'].includes(e.key)) || (e.ctrlKey && e.key === 'U')) {
+        e.preventDefault();
+        alert('Akses dibatasi.');
+        return false;
+      }
+    });
+
+    window.onload = () => {
+      const today = new Date().toISOString().split('T')[0];
+      document.getElementById('actDate').value = today;
+      document.getElementById('targetDeadline').value = today;
+      fetchAllData();
+    };
+
+    function secretAdminTrigger() {
+      isAdmin = !isAdmin;
+      document.getElementById('adminBadge').classList.toggle('hidden', !isAdmin);
+      alert(isAdmin ? "Mode Admin Aktif: Tombol Edit/Hapus Catatan Terbuka." : "Mode Admin Dinonaktifkan.");
+      renderNotes();
+    }
+
+    async function fetchAllData() {
+      try {
+        let res = await fetch(SCRIPT_URL + "?action=getAllData");
+        let json = await res.json();
+        if (json.status === "success") {
+          appData = json.data;
+          renderAll();
+        }
+      } catch (err) {
+        console.error("Gagal memuat data:", err);
+      }
+    }
+
+    function renderAll() {
+      renderNotes();
+      renderActivities();
+      renderTargets();
+    }
+
+    // --- NAVIGASI UTAMA ---
+    function switchMainTab(tab) {
+      ['dashboard', 'aktivitas', 'target'].forEach(t => {
+        document.getElementById('tab' + capitalize(t)).classList.toggle('hidden', t !== tab);
+        let btn = document.getElementById('navMain' + capitalize(t));
+        if (t === tab) {
+          btn.className = "px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition cursor-pointer bg-blue-600 text-white shadow-xs whitespace-nowrap";
+        } else {
+          btn.className = "px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition cursor-pointer bg-slate-100 text-slate-600 hover:bg-slate-200 whitespace-nowrap";
+        }
+      });
+    }
+
+    // --- NAVIGASI AKTIVITAS ---
+    function switchSubAktivitas(sub) {
+      document.getElementById('subContainerKegiatan').classList.toggle('hidden', sub !== 'kegiatan');
+      document.getElementById('subContainerRiwayat').classList.toggle('hidden', sub !== 'riwayat');
+      
+      document.getElementById('subBtnKegiatan').className = sub === 'kegiatan' ? "px-4 py-2 rounded-xl text-xs font-bold bg-blue-600 text-white cursor-pointer transition" : "px-4 py-2 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 cursor-pointer transition";
+      document.getElementById('subBtnRiwayat').className = sub === 'riwayat' ? "px-4 py-2 rounded-xl text-xs font-bold bg-blue-600 text-white cursor-pointer transition" : "px-4 py-2 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 cursor-pointer transition";
+      
+      if (sub === 'riwayat') renderDailyGrid();
+    }
+
+    // --- NAVIGASI TARGET ---
+    function switchSubTarget(cat) {
+      currentTargetSub = cat;
+      ['Usaha', 'Kebutuhan', 'Kewajiban', 'Skripsi'].forEach(c => {
+        let btn = document.getElementById('targetSub' + c);
+        btn.className = c === cat ? "px-4 py-2 rounded-xl text-xs font-bold bg-emerald-600 text-white cursor-pointer transition whitespace-nowrap" : "px-4 py-2 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 cursor-pointer transition whitespace-nowrap";
+      });
+      document.getElementById('targetCategoryInput').value = cat;
+      document.getElementById('targetFormTitle').innerText = "🎯 Tambah Target " + cat;
+      document.getElementById('targetListTitle').innerText = "Daftar Target " + cat;
+      renderTargets();
+    }
+
+    // --- RENDER NOTES ---
+    function renderNotes() {
+      let container = document.getElementById('notesContainer');
+      document.getElementById('statTotalNotes').innerText = appData.notes.length;
+      if (appData.notes.length === 0) {
+        container.innerHTML = `<p class="text-xs text-slate-400 col-span-2 text-center py-6">Belum ada catatan.</p>`;
+        return;
+      }
+      container.innerHTML = appData.notes.map(n => `
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-2 relative">
+          <h3 class="font-bold text-slate-900 text-sm">${escapeHtml(n.title)}</h3>
+          <p class="text-xs text-slate-600 whitespace-pre-wrap">${escapeHtml(n.content)}</p>
+          ${isAdmin ? `
+            <div class="flex gap-2 pt-2 border-t border-slate-100 mt-2">
+              <button onclick='openEditNoteModal(${JSON.stringify(n)})' class="text-xs text-blue-600 font-semibold cursor-pointer">Edit</button>
+              <button onclick="deleteNote('${n.id}')" class="text-xs text-red-600 font-semibold cursor-pointer">Hapus</button>
+            </div>
+          ` : ''}
         </div>
+      `).join('');
+    }
 
-        <div>
-          <label class="block text-xs font-semibold text-slate-600 mb-1">Tanggal Pelaksanaan</label>
-          <input type="date" id="editTargetDate" required class="w-full border border-slate-200 rounded-lg p-2 text-sm outline-none focus:ring-2 focus:ring-emerald-500">
+    // --- RENDER ACTIVITIES ---
+    function renderActivities() {
+      let todoContainer = document.getElementById('todoActivitiesContainer');
+      let todos = appData.activities.filter(a => a.status !== "Selesai");
+
+      if (todos.length === 0) {
+        todoContainer.innerHTML = `<p class="text-xs text-slate-400 text-center py-6">Tidak ada kegiatan tertunda.</p>`;
+        return;
+      }
+
+      todoContainer.innerHTML = todos.map(a => `
+        <div class="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-xl">
+          <div>
+            <span class="text-[10px] font-bold px-2 py-0.5 bg-blue-100 text-blue-800 rounded-md">${a.category}</span>
+            <h4 class="font-bold text-sm text-slate-800 mt-1">${escapeHtml(a.activity)}</h4>
+            <p class="text-xs text-slate-500">📅 ${a.date} | ⏰ ${a.startTime} - ${a.endTime}</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="completeActivity('${a.id}')" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold cursor-pointer">Tandai Selesai</button>
+            <button onclick="deleteActivity('${a.id}')" class="text-red-500 text-xs px-2 py-1 cursor-pointer">Hapus</button>
+          </div>
         </div>
+      `).join('');
+    }
 
-        <div class="flex items-center gap-2 pt-2">
-          <button type="button" onclick="closeEditTargetModal()" class="w-1/2 py-2 text-xs font-semibold text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 cursor-pointer">
-            Batal
-          </button>
-          <button type="submit" id="btnSaveEditTarget" class="w-1/2 py-2 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg cursor-pointer">
-            Simpan Perubahan
-          </button>
+    function renderDailyGrid() {
+      let gridContainer = document.getElementById('dailyGridContainer');
+      let completed = appData.activities.filter(a => a.status === "Selesai");
+
+      let grouped = {};
+      completed.forEach(a => {
+        if (!grouped[a.date]) grouped[a.date] = [];
+        grouped[a.date].push(a);
+      });
+
+      let dates = Object.keys(grouped).sort().reverse();
+      if (dates.length === 0) {
+        gridContainer.innerHTML = `<p class="text-xs text-slate-400 col-span-2 text-center py-6">Belum ada riwayat kegiatan selesai.</p>`;
+        return;
+      }
+
+      gridContainer.innerHTML = dates.map(date => `
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+          <div class="border-b border-slate-100 pb-2 flex justify-between items-center">
+            <h3 class="font-bold text-slate-900 text-sm">📅 ${date}</h3>
+            <span class="text-xs bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-bold">${grouped[date].length} Kegiatan</span>
+          </div>
+          <div class="space-y-2">
+            ${grouped[date].map(item => `
+              <div class="p-2.5 bg-slate-50 rounded-xl text-xs space-y-1">
+                <div class="font-bold text-slate-800">${escapeHtml(item.activity)}</div>
+                <div class="text-slate-500">${item.category} • ⏰ ${item.startTime} - ${item.endTime}</div>
+              </div>
+            `).join('')}
+          </div>
         </div>
-      </form>
-    </div>
-  </div>
+      `).join('');
+    }
 
-  <script src="script.js"></script>
+    // --- RENDER TARGETS ---
+    function renderTargets() {
+      let container = document.getElementById('targetContainer');
+      let filtered = appData.targets.filter(t => t.category === currentTargetSub);
+      document.getElementById('targetCountBadge').innerText = filtered.length;
+
+      if (filtered.length === 0) {
+        container.innerHTML = `<p class="text-xs text-slate-400 text-center py-6">Belum ada target untuk kategori ${currentTargetSub}.</p>`;
+        return;
+      }
+
+      container.innerHTML = filtered.map(t => `
+        <div class="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-xl">
+          <div>
+            <h4 class="font-bold text-sm text-slate-800 ${t.status === 'Selesai' ? 'line-through text-slate-400' : ''}">${escapeHtml(t.title)}</h4>
+            <p class="text-xs text-slate-500">⏳ Tenggat: ${t.deadline}</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="toggleTargetStatus('${t.id}', '${t.status === 'Selesai' ? 'Belum' : 'Selesai'}')" class="px-3 py-1.5 ${t.status === 'Selesai' ? 'bg-amber-500 hover:bg-amber-600' : 'bg-emerald-600 hover:bg-emerald-700'} text-white rounded-lg text-xs font-semibold cursor-pointer">
+              ${t.status === 'Selesai' ? 'Batalkan' : 'Selesai'}
+            </button>
+            <button onclick="deleteTarget('${t.id}')" class="text-red-500 text-xs px-2 py-1 cursor-pointer">Hapus</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // --- FORM HANDLERS ---
+    async function handleNoteSubmit(e) {
+      e.preventDefault();
+      let payload = { action: "addNote", data: { title: document.getElementById('noteTitle').value, content: document.getElementById('noteContent').value } };
+      await sendPost(payload);
+      document.getElementById('noteForm').reset();
+      fetchAllData();
+    }
+
+    async function handleActivitySubmit(e) {
+      e.preventDefault();
+      let payload = {
+        action: "addActivity",
+        data: {
+          date: document.getElementById('actDate').value,
+          startTime: document.getElementById('actStart').value,
+          endTime: document.getElementById('actEnd').value,
+          category: document.getElementById('actCategory').value,
+          activity: document.getElementById('actName').value,
+          notes: document.getElementById('actNotes').value
+        }
+      };
+      await sendPost(payload);
+      document.getElementById('activityForm').reset();
+      fetchAllData();
+    }
+
+    async function handleTargetSubmit(e) {
+      e.preventDefault();
+      let payload = {
+        action: "addTarget",
+        data: {
+          title: document.getElementById('targetTitle').value,
+          category: document.getElementById('targetCategoryInput').value,
+          deadline: document.getElementById('targetDeadline').value
+        }
+      };
+      await sendPost(payload);
+      document.getElementById('targetTitle').value = '';
+      fetchAllData();
+    }
+
+    async function completeActivity(id) {
+      await sendPost({ action: "completeActivity", id: id });
+      fetchAllData();
+    }
+
+    async function deleteActivity(id) {
+      if (confirm("Hapus kegiatan ini?")) {
+        await sendPost({ action: "deleteActivity", id: id });
+        fetchAllData();
+      }
+    }
+
+    async function toggleTargetStatus(id, status) {
+      await sendPost({ action: "toggleTargetStatus", id: id, status: status });
+      fetchAllData();
+    }
+
+    async function deleteTarget(id) {
+      if (confirm("Hapus target ini?")) {
+        await sendPost({ action: "deleteTarget", id: id });
+        fetchAllData();
+      }
+    }
+
+    // Modal Edit Catatan Admin
+    function openEditNoteModal(note) {
+      document.getElementById('editNoteId').value = note.id;
+      document.getElementById('editNoteTitle').value = note.title;
+      document.getElementById('editNoteContent').value = note.content;
+      document.getElementById('editNoteModal').classList.remove('hidden');
+    }
+
+    function closeEditNoteModal() {
+      document.getElementById('editNoteModal').classList.add('hidden');
+    }
+
+    async function handleEditNoteSubmit(e) {
+      e.preventDefault();
+      let payload = {
+        action: "updateNote",
+        data: {
+          id: document.getElementById('editNoteId').value,
+          title: document.getElementById('editNoteTitle').value,
+          content: document.getElementById('editNoteContent').value
+        }
+      };
+      await sendPost(payload);
+      closeEditNoteModal();
+      fetchAllData();
+    }
+
+    async function deleteNote(id) {
+      if (confirm("Hapus catatan ini?")) {
+        await sendPost({ action: "deleteNote", id: id });
+        fetchAllData();
+      }
+    }
+
+    async function sendPost(payload) {
+      try {
+        await fetch(SCRIPT_URL, {
+          method: "POST",
+          body: JSON.stringify(payload)
+        });
+      } catch (err) {
+        console.error("Error POST:", err);
+      }
+    }
+
+    function capitalize(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+    function escapeHtml(text) {
+      return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    }
+  </script>
 </body>
 </html>
