@@ -2,8 +2,7 @@
  * FRONTEND LOGIC - 1% Daily Habit & Activity Tracker
  */
 
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz0T8Z_b0NvYHgz4BSTUGHnLZ36hKx6ebiFKdpymywU2hu6mtWps3pNS61D1pXcDfbAgw/exec"; // Ganti dengan URL deployment Web App Apps Script Anda
-const ADMIN_PIN = "1234"; // PIN Admin Anda
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwx1fsPbeoNJvUaVCP4Llb1LKPr_N-SDHpWWu5aolM3IGMX4-yprD0rIUj7nRSqh_MP8w/exec"; // Ganti dengan URL deployment Web App Apps Script Anda
 
 let appData = { notes: [], activities: [], targets: [] };
 let isAdmin = false;
@@ -33,12 +32,11 @@ document.addEventListener('keydown', e => {
 
 window.onload = () => {
   const today = new Date().toISOString().split('T')[0];
-  document.getElementById('actDate').value = today;
-  document.getElementById('targetDeadline').value = today;
+  let targetInput = document.getElementById('targetDeadline');
+  if (targetInput) targetInput.value = today;
   fetchAllData();
 };
 
-// Pemicu Klik Rahasia 5x pada header utama
 function secretAdminTrigger() {
   secretClickCount++;
   if (secretClickCount >= 5) {
@@ -55,45 +53,35 @@ function closeLoginModal() {
   document.getElementById('loginModal').classList.add('hidden');
 }
 
-function verifyAdminPin(e) {
+// Verifikasi PIN Dinamis yang tersimpan di Spreadsheet
+async function verifyAdminPin(e) {
   e.preventDefault();
   const pin = document.getElementById('adminPinInput').value;
-  if (pin === ADMIN_PIN) {
-    closeLoginModal();
-    toggleAdminMode(true);
-  } else {
-    alert("PIN Salah!");
+  try {
+    let res = await fetch(SCRIPT_URL, {
+      method: "POST",
+      body: JSON.stringify({ action: "verifyPin", pin: pin })
+    });
+    let json = await res.json();
+    if (json.status === "success") {
+      closeLoginModal();
+      toggleAdminMode(true);
+    } else {
+      alert("Kode akses salah!");
+    }
+  } catch (err) {
+    console.error("Gagal verifikasi PIN:", err);
+    alert("Kesalahan koneksi.");
   }
 }
 
 function toggleAdminMode(status) {
   isAdmin = status;
   document.getElementById('adminBadge').classList.toggle('hidden', !isAdmin);
-  
-  // Update Lock Badges & Submit Buttons
-  ['note', 'act', 'target'].forEach(prefix => {
-    let badge = document.getElementById(prefix + 'LockBadge');
-    let btn = document.getElementById('btnSubmit' + capitalize(prefix === 'act' ? 'activity' : prefix));
-    if (badge && btn) {
-      if (isAdmin) {
-        badge.className = "text-[10px] bg-emerald-100 text-emerald-700 font-bold px-2 py-0.5 rounded-md";
-        badge.innerText = "Terbuka (Admin)";
-        btn.disabled = false;
-        btn.className = "w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-lg text-sm transition cursor-pointer";
-        if(prefix === 'target') btn.className = "w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 rounded-lg text-sm transition cursor-pointer";
-      } else {
-        badge.className = "text-[10px] bg-red-100 text-red-700 font-bold px-2 py-0.5 rounded-md";
-        badge.innerText = "Terkunci (Admin)";
-        btn.disabled = true;
-        btn.className = "w-full bg-slate-300 text-slate-600 font-semibold py-2.5 rounded-lg text-sm transition cursor-pointer";
-      }
-    }
-  });
-
   renderNotes();
   renderActivities();
   renderTargets();
-  alert(isAdmin ? "Mode Admin Aktif! Fitur Tambah/Edit/Hapus Terbuka." : "Mode Admin Dinonaktifkan.");
+  alert(isAdmin ? "Mode Admin Aktif! Tombol Edit/Hapus terbuka." : "Mode Admin Dinonaktifkan.");
 }
 
 async function fetchAllData() {
@@ -176,28 +164,31 @@ function renderNotes() {
   `).join('');
 }
 
-// --- RENDER ACTIVITIES (TO-DO) ---
+// --- RENDER ACTIVITIES & DYNAMIC NOTES ---
 function renderActivities() {
   let todoContainer = document.getElementById('todoActivitiesContainer');
   let todos = appData.activities;
 
   if (todos.length === 0) {
-    todoContainer.innerHTML = `<p class="text-xs text-slate-400 text-center py-6">Belum ada kegiatan rutin harian.</p>`;
+    todoContainer.innerHTML = `<p class="text-xs text-slate-400 text-center py-6">Belum ada kegiatan harian.</p>`;
     return;
   }
 
   todoContainer.innerHTML = todos.map(a => `
-    <div class="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-xl">
-      <div>
-        <span class="text-[10px] font-bold px-2 py-0.5 bg-blue-100 text-blue-800 rounded-md">${a.category}</span>
-        <h4 class="font-bold text-sm text-slate-800 mt-1" dir="auto">${escapeHtml(a.activity)}</h4>
-        <p class="text-xs text-slate-500">📅 ${a.date} | ⏰ ${a.startTime} - ${a.endTime} | Status: <span class="${a.status === 'Selesai' ? 'text-emerald-600 font-bold' : 'text-amber-600 font-bold'}">${a.status}</span></p>
+    <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+      <div class="flex items-center justify-between">
+        <h4 class="font-bold text-sm text-slate-800" dir="auto">${escapeHtml(a.activity)}</h4>
+        <div class="flex items-center gap-2">
+          <button onclick="completeActivity('${a.id}')" class="px-3 py-1.5 ${a.status === 'Selesai' ? 'bg-amber-500' : 'bg-emerald-600'} hover:opacity-90 text-white rounded-lg text-xs font-semibold cursor-pointer">
+            ${a.status === 'Selesai' ? 'Batalkan' : 'Tandai Selesai'}
+          </button>
+          ${isAdmin ? `<button onclick="deleteActivity('${a.id}')" class="text-red-500 text-xs px-2 py-1 cursor-pointer">Hapus</button>` : ''}
+        </div>
       </div>
-      <div class="flex items-center gap-2">
-        <button onclick="completeActivity('${a.id}')" class="px-3 py-1.5 ${a.status === 'Selesai' ? 'bg-amber-500' : 'bg-emerald-600'} hover:opacity-90 text-white rounded-lg text-xs font-semibold cursor-pointer">
-          ${a.status === 'Selesai' ? 'Batalkan' : 'Tandai Selesai'}
-        </button>
-        ${isAdmin ? `<button onclick="deleteActivity('${a.id}')" class="text-red-500 text-xs px-2 py-1 cursor-pointer">Hapus</button>` : ''}
+      <!-- Kolom Isian Catatan Kegiatan (Misal: Juz 1-2) -->
+      <div class="flex items-center gap-2 pt-1">
+        <input type="text" id="actNoteInput_${a.id}" dir="auto" value="${escapeHtml(a.notes || '')}" placeholder="Tambah catatan kegiatan (cth: Juz 1-2)..." class="w-full border border-slate-200 rounded-lg px-2.5 py-1 text-xs bg-white outline-none focus:ring-1 focus:ring-blue-500">
+        <button onclick="saveActivityNotes('${a.id}')" class="px-3 py-1 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-semibold rounded-lg cursor-pointer whitespace-nowrap">Simpan Catatan</button>
       </div>
     </div>
   `).join('');
@@ -231,7 +222,7 @@ function renderDailyGrid() {
         ${grouped[date].map(item => `
           <div class="p-2.5 bg-slate-50 rounded-xl text-xs space-y-1">
             <div class="font-bold text-slate-800" dir="auto">${escapeHtml(item.activity)}</div>
-            <div class="text-slate-500">${item.category} • ⏰ ${item.startTime} - ${item.endTime}</div>
+            ${item.notes ? `<div class="text-blue-600 font-medium">Catatan: ${escapeHtml(item.notes)}</div>` : ''}
           </div>
         `).join('')}
       </div>
@@ -266,7 +257,7 @@ function renderTargets() {
   `).join('');
 }
 
-// --- FORM SUBMIT HANDLERS (ADMIN ONLY) ---
+// --- FORM SUBMIT HANDLERS ---
 async function handleNoteSubmit(e) {
   e.preventDefault();
   if (!isAdmin) return alert("Akses ditolak. Masuk sebagai admin terlebih dahulu.");
@@ -279,15 +270,12 @@ async function handleNoteSubmit(e) {
 async function handleActivitySubmit(e) {
   e.preventDefault();
   if (!isAdmin) return alert("Akses ditolak. Masuk sebagai admin terlebih dahulu.");
+  const today = new Date().toISOString().split('T')[0];
   let payload = {
     action: "addActivity",
     data: {
-      date: document.getElementById('actDate').value,
-      startTime: document.getElementById('actStart').value,
-      endTime: document.getElementById('actEnd').value,
-      category: document.getElementById('actCategory').value,
-      activity: document.getElementById('actName').value,
-      notes: document.getElementById('actNotes').value
+      date: today,
+      activity: document.getElementById('actName').value
     }
   };
   await sendPost(payload);
@@ -313,9 +301,14 @@ async function handleTargetSubmit(e) {
 
 // --- USER ACTIONS (TANPA PERLU LOGIN) ---
 async function completeActivity(id) {
-  let act = appData.activities.find(a => a.id === id);
-  let newStatus = (act && act.status === 'Selesai') ? 'Belum' : 'Selesai';
   await sendPost({ action: "completeActivity", id: id });
+  fetchAllData();
+}
+
+async function saveActivityNotes(id) {
+  let notesVal = document.getElementById('actNoteInput_' + id).value;
+  await sendPost({ action: "updateActivityNotes", id: id, notes: notesVal });
+  alert("Catatan kegiatan berhasil disimpan!");
   fetchAllData();
 }
 
@@ -385,5 +378,5 @@ async function sendPost(payload) {
 
 function capitalize(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
 function escapeHtml(text) {
-  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+  return String(text).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
 }
