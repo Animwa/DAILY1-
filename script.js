@@ -1,8 +1,8 @@
 /**
- * FRONTEND LOGIC - 1% Daily Habit & Activity Tracker (Optimized Sync)
+ * FRONTEND LOGIC - 1% Daily Habit & Activity Tracker
  */
 
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyhdyr9GIS_bOW6BzNcMcPIEDT77Pdh_g7i3V1wwj3m37B-OPXhFOqCVUQH9yNsZgv02w/exec"; // Ganti dengan URL deployment Web App Apps Script Anda
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxJXjJWOL5LRdFKeHHkxR8R8m8ihrajEgsTH23odMy2HI6yVxH1JDoXEPggNchPTuwG3w/exec"; 
 
 let appData = { notes: [], activities: [], targets: [] };
 let isAdmin = false;
@@ -53,6 +53,7 @@ function closeLoginModal() {
   document.getElementById('loginModal').classList.add('hidden');
 }
 
+// Verifikasi PIN langsung memeriksa sel A2 dari sheet Settings di backend
 async function verifyAdminPin(e) {
   e.preventDefault();
   const pin = document.getElementById('adminPinInput').value;
@@ -83,7 +84,6 @@ function toggleAdminMode(status) {
   alert(isAdmin ? "Mode Admin Aktif! Tombol Edit/Hapus terbuka." : "Mode Admin Dinonaktifkan.");
 }
 
-// Sinkronisasi data dari Google Sheets dengan indikator loading
 async function fetchAllData() {
   const syncBtn = document.querySelector('button[onclick="fetchAllData()"]');
   if (syncBtn) syncBtn.innerHTML = "🔄 Menyinkronkan...";
@@ -97,7 +97,6 @@ async function fetchAllData() {
     }
   } catch (err) {
     console.error("Gagal memuat data:", err);
-    alert("Gagal menyinkronkan data. Periksa kembali URL Web App Apps Script Anda.");
   } finally {
     if (syncBtn) syncBtn.innerHTML = "🔄 Sinkronisasi";
   }
@@ -170,7 +169,7 @@ function renderNotes() {
   `).join('');
 }
 
-// --- RENDER ACTIVITIES & DYNAMIC NOTES ---
+// --- RENDER ACTIVITIES (TANPA CONTOH TEKS PADA PLACEHOLDER) ---
 function renderActivities() {
   let todoContainer = document.getElementById('todoActivitiesContainer');
   let todos = appData.activities;
@@ -191,8 +190,9 @@ function renderActivities() {
           ${isAdmin ? `<button onclick="deleteActivity('${a.id}')" class="text-red-500 text-xs px-2 py-1 cursor-pointer">Hapus</button>` : ''}
         </div>
       </div>
+      <!-- Kolom Isian Catatan Kegiatan (Bersih tanpa contoh teks) -->
       <div class="flex items-center gap-2 pt-1">
-        <input type="text" id="actNoteInput_${a.id}" dir="auto" value="${escapeHtml(a.notes || '')}" placeholder="Tambah catatan kegiatan (cth: Juz 1-2)..." class="w-full border border-slate-200 rounded-lg px-2.5 py-1 text-xs bg-white outline-none focus:ring-1 focus:ring-blue-500">
+        <input type="text" id="actNoteInput_${a.id}" dir="auto" value="${escapeHtml(a.notes || '')}" placeholder="Tambah catatan kegiatan..." class="w-full border border-slate-200 rounded-lg px-2.5 py-1 text-xs bg-white outline-none focus:ring-1 focus:ring-blue-500">
         <button onclick="saveActivityNotes('${a.id}')" class="px-3 py-1 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-semibold rounded-lg cursor-pointer whitespace-nowrap">Simpan Catatan</button>
       </div>
     </div>
@@ -369,7 +369,6 @@ async function deleteTarget(id) {
   }
 }
 
-// Fungsi pengiriman POST stabil tanpa header pemicu CORS preflight error
 async function sendPost(payload) {
   try {
     let res = await fetch(SCRIPT_URL, {
@@ -379,7 +378,6 @@ async function sendPost(payload) {
     return await res.json();
   } catch (err) {
     console.error("Error POST:", err);
-    alert("Gagal mengirim data ke server. Periksa koneksi internet Anda.");
   }
 }
 
