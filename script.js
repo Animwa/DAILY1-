@@ -1,8 +1,8 @@
 /**
- * FRONTEND LOGIC - 1% Daily Habit & Activity Tracker
+ * FRONTEND LOGIC - 1% Daily Habit & Activity Tracker (Optimized Sync)
  */
 
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwx1fsPbeoNJvUaVCP4Llb1LKPr_N-SDHpWWu5aolM3IGMX4-yprD0rIUj7nRSqh_MP8w/exec"; // Ganti dengan URL deployment Web App Apps Script Anda
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyhdyr9GIS_bOW6BzNcMcPIEDT77Pdh_g7i3V1wwj3m37B-OPXhFOqCVUQH9yNsZgv02w/exec"; // Ganti dengan URL deployment Web App Apps Script Anda
 
 let appData = { notes: [], activities: [], targets: [] };
 let isAdmin = false;
@@ -53,7 +53,6 @@ function closeLoginModal() {
   document.getElementById('loginModal').classList.add('hidden');
 }
 
-// Verifikasi PIN Dinamis yang tersimpan di Spreadsheet
 async function verifyAdminPin(e) {
   e.preventDefault();
   const pin = document.getElementById('adminPinInput').value;
@@ -71,7 +70,7 @@ async function verifyAdminPin(e) {
     }
   } catch (err) {
     console.error("Gagal verifikasi PIN:", err);
-    alert("Kesalahan koneksi.");
+    alert("Kesalahan koneksi saat verifikasi.");
   }
 }
 
@@ -84,7 +83,11 @@ function toggleAdminMode(status) {
   alert(isAdmin ? "Mode Admin Aktif! Tombol Edit/Hapus terbuka." : "Mode Admin Dinonaktifkan.");
 }
 
+// Sinkronisasi data dari Google Sheets dengan indikator loading
 async function fetchAllData() {
+  const syncBtn = document.querySelector('button[onclick="fetchAllData()"]');
+  if (syncBtn) syncBtn.innerHTML = "🔄 Menyinkronkan...";
+
   try {
     let res = await fetch(SCRIPT_URL + "?action=getAllData");
     let json = await res.json();
@@ -94,6 +97,9 @@ async function fetchAllData() {
     }
   } catch (err) {
     console.error("Gagal memuat data:", err);
+    alert("Gagal menyinkronkan data. Periksa kembali URL Web App Apps Script Anda.");
+  } finally {
+    if (syncBtn) syncBtn.innerHTML = "🔄 Sinkronisasi";
   }
 }
 
@@ -185,7 +191,6 @@ function renderActivities() {
           ${isAdmin ? `<button onclick="deleteActivity('${a.id}')" class="text-red-500 text-xs px-2 py-1 cursor-pointer">Hapus</button>` : ''}
         </div>
       </div>
-      <!-- Kolom Isian Catatan Kegiatan (Misal: Juz 1-2) -->
       <div class="flex items-center gap-2 pt-1">
         <input type="text" id="actNoteInput_${a.id}" dir="auto" value="${escapeHtml(a.notes || '')}" placeholder="Tambah catatan kegiatan (cth: Juz 1-2)..." class="w-full border border-slate-200 rounded-lg px-2.5 py-1 text-xs bg-white outline-none focus:ring-1 focus:ring-blue-500">
         <button onclick="saveActivityNotes('${a.id}')" class="px-3 py-1 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-semibold rounded-lg cursor-pointer whitespace-nowrap">Simpan Catatan</button>
@@ -299,7 +304,7 @@ async function handleTargetSubmit(e) {
   fetchAllData();
 }
 
-// --- USER ACTIONS (TANPA PERLU LOGIN) ---
+// --- USER ACTIONS ---
 async function completeActivity(id) {
   await sendPost({ action: "completeActivity", id: id });
   fetchAllData();
@@ -308,7 +313,6 @@ async function completeActivity(id) {
 async function saveActivityNotes(id) {
   let notesVal = document.getElementById('actNoteInput_' + id).value;
   await sendPost({ action: "updateActivityNotes", id: id, notes: notesVal });
-  alert("Catatan kegiatan berhasil disimpan!");
   fetchAllData();
 }
 
@@ -365,14 +369,17 @@ async function deleteTarget(id) {
   }
 }
 
+// Fungsi pengiriman POST stabil tanpa header pemicu CORS preflight error
 async function sendPost(payload) {
   try {
-    await fetch(SCRIPT_URL, {
+    let res = await fetch(SCRIPT_URL, {
       method: "POST",
       body: JSON.stringify(payload)
     });
+    return await res.json();
   } catch (err) {
     console.error("Error POST:", err);
+    alert("Gagal mengirim data ke server. Periksa koneksi internet Anda.");
   }
 }
 
