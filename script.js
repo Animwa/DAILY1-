@@ -1,8 +1,8 @@
 /**
- * FRONTEND LOGIC - 1% Daily Habit & Activity Tracker
+ * FRONTEND LOGIC - 1% Daily Habit & Activity Tracker (Format Tanggal Konsisten & Edit Kegiatan)
  */
 
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwwcv9UkOeoTI-XmNtjtHkmW1cped4UkncZgHohSPSb0jMI2VcVr1BeQSSmQkJwi0cG_g/exec"; 
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxurwk5648ciLG-RNZS7WnxHYQPVG8wnhugpBT4gC7Y00wTar1UcXwjitD4mKuzw4s7/exec"; 
 
 let appData = { notes: [], activities: [], targets: [] };
 let isAdmin = false;
@@ -41,23 +41,31 @@ window.onload = () => {
   let targetInput = document.getElementById('targetDeadline');
   if (targetInput) targetInput.value = today;
 
-  updateDayName(today);
+  updateDayBadge(today);
   fetchAllData();
 };
 
 function onDateChanged() {
   let dateInput = document.getElementById('selectedActivityDate');
   currentSelectedDate = dateInput.value;
-  updateDayName(currentSelectedDate);
+  updateDayBadge(currentSelectedDate);
   renderActivities();
 }
 
-function updateDayName(dateStr) {
-  const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
-  let d = new Date(dateStr);
-  let dayName = days[d.getDay()];
-  let dayBadge = document.getElementById('selectedDayName');
-  if (dayBadge) dayBadge.innerText = dayName;
+// Fungsi Formatting Tanggal Menjadi: Senin, 16 November 2026
+function formatIndonesianDate(dateString) {
+  if (!dateString) return "";
+  let d = new Date(dateString);
+  if (isNaN(d.getTime())) return dateString;
+  
+  const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+  return d.toLocaleDateString('id-ID', options);
+}
+
+function updateDayBadge(dateStr) {
+  let formatted = formatIndonesianDate(dateStr);
+  let dayBadge = document.getElementById('selectedDayBadge');
+  if (dayBadge) dayBadge.innerText = formatted;
 }
 
 function secretAdminTrigger() {
@@ -103,7 +111,7 @@ function toggleAdminMode(status) {
   renderNotes();
   renderActivities();
   renderTargets();
-  alert(isAdmin ? "Mode Admin Aktif! Tombol Edit/Hapus terbuka." : "Mode Admin Dinonaktifkan.");
+  alert(isAdmin ? "Mode Admin Aktif! Tombol Edit & Hapus terbuka." : "Mode Admin Dinonaktifkan.");
 }
 
 async function fetchAllData() {
@@ -136,9 +144,9 @@ function switchMainTab(tab) {
     document.getElementById('tab' + capitalize(t)).classList.toggle('hidden', t !== tab);
     let btn = document.getElementById('navMain' + capitalize(t));
     if (t === tab) {
-      btn.className = "px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition cursor-pointer bg-blue-600 text-white shadow-xs whitespace-nowrap";
+      btn.className = "px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition cursor-pointer bg-blue-600 text-white shadow-xs whitespace-nowrap shrink-0";
     } else {
-      btn.className = "px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition cursor-pointer bg-slate-100 text-slate-600 hover:bg-slate-200 whitespace-nowrap";
+      btn.className = "px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition cursor-pointer bg-slate-100 text-slate-600 hover:bg-slate-200 whitespace-nowrap shrink-0";
     }
   });
 }
@@ -148,8 +156,8 @@ function switchSubAktivitas(sub) {
   document.getElementById('subContainerKegiatan').classList.toggle('hidden', sub !== 'kegiatan');
   document.getElementById('subContainerRiwayat').classList.toggle('hidden', sub !== 'riwayat');
   
-  document.getElementById('subBtnKegiatan').className = sub === 'kegiatan' ? "px-4 py-2 rounded-xl text-xs font-bold bg-blue-600 text-white cursor-pointer transition" : "px-4 py-2 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 cursor-pointer transition";
-  document.getElementById('subBtnRiwayat').className = sub === 'riwayat' ? "px-4 py-2 rounded-xl text-xs font-bold bg-blue-600 text-white cursor-pointer transition" : "px-4 py-2 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 cursor-pointer transition";
+  document.getElementById('subBtnKegiatan').className = sub === 'kegiatan' ? "px-3.5 sm:px-4 py-2 rounded-xl text-xs font-bold bg-blue-600 text-white cursor-pointer transition whitespace-nowrap shrink-0" : "px-3.5 sm:px-4 py-2 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 cursor-pointer transition whitespace-nowrap shrink-0";
+  document.getElementById('subBtnRiwayat').className = sub === 'riwayat' ? "px-3.5 sm:px-4 py-2 rounded-xl text-xs font-bold bg-blue-600 text-white cursor-pointer transition whitespace-nowrap shrink-0" : "px-3.5 sm:px-4 py-2 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 cursor-pointer transition whitespace-nowrap shrink-0";
   
   if (sub === 'riwayat') renderDailyGrid();
 }
@@ -160,7 +168,7 @@ function switchSubTarget(cat) {
   ['Usaha', 'Kebutuhan', 'Kewajiban', 'Skripsi'].forEach(c => {
     let btn = document.getElementById('targetSub' + c);
     if (btn) {
-      btn.className = c === cat ? "px-4 py-2 rounded-xl text-xs font-bold bg-emerald-600 text-white cursor-pointer transition whitespace-nowrap" : "px-4 py-2 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 cursor-pointer transition whitespace-nowrap";
+      btn.className = c === cat ? "px-3.5 sm:px-4 py-2 rounded-xl text-xs font-bold bg-emerald-600 text-white cursor-pointer transition whitespace-nowrap shrink-0" : "px-3.5 sm:px-4 py-2 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 cursor-pointer transition whitespace-nowrap shrink-0";
     }
   });
   document.getElementById('targetCategoryInput').value = cat;
@@ -182,7 +190,7 @@ function renderNotes() {
       <h3 class="font-bold text-slate-900 text-sm">${escapeHtml(n.title)}</h3>
       <p class="text-xs text-slate-600 whitespace-pre-wrap" dir="auto">${escapeHtml(n.content)}</p>
       ${isAdmin ? `
-        <div class="flex gap-2 pt-2 border-t border-slate-100 mt-2">
+        <div class="flex gap-3 pt-2 border-t border-slate-100 mt-2">
           <button onclick='openEditNoteModal(${JSON.stringify(n)})' class="text-xs text-blue-600 font-semibold cursor-pointer">Edit</button>
           <button onclick="deleteNote('${n.id}')" class="text-xs text-red-600 font-semibold cursor-pointer">Hapus</button>
         </div>
@@ -191,7 +199,7 @@ function renderNotes() {
   `).join('');
 }
 
-// --- RENDER ACTIVITIES DENGAN LOGIKA RESET HARIAN ---
+// --- RENDER ACTIVITIES ---
 function renderActivities() {
   let todoContainer = document.getElementById('todoActivitiesContainer');
   let todos = appData.activities;
@@ -201,36 +209,38 @@ function renderActivities() {
     return;
   }
 
-  // Cek apakah tanggal yang dipilih berbeda dari hari ini (reset harian otomatis untuk hari baru)
   const todayStr = new Date().toISOString().split('T')[0];
   let isDifferentDay = (currentSelectedDate !== todayStr);
 
   todoContainer.innerHTML = todos.map(a => {
-    // Jika beda hari, anggap status belum selesai & catatan kosong untuk diisi di tanggal tersebut
     let displayStatus = isDifferentDay ? "Belum" : a.status;
     let displayNotes = isDifferentDay ? "" : (a.notes || "");
 
     return `
-      <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
-        <div class="flex items-center justify-between">
+      <div class="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl space-y-2.5">
+        <div class="flex items-center justify-between gap-2 flex-wrap">
           <h4 class="font-bold text-sm text-slate-800" dir="auto">${escapeHtml(a.activity)}</h4>
           <div class="flex items-center gap-2">
-            <button onclick="completeActivityWithNotes('${a.id}')" class="px-3 py-1.5 ${displayStatus === 'Selesai' ? 'bg-amber-500' : 'bg-emerald-600'} hover:opacity-90 text-white rounded-lg text-xs font-semibold cursor-pointer">
+            <button onclick="completeActivityWithNotes('${a.id}')" class="px-3 py-1.5 ${displayStatus === 'Selesai' ? 'bg-amber-500 hover:bg-amber-600' : 'bg-emerald-600 hover:bg-emerald-700'} text-white rounded-xl text-xs font-semibold cursor-pointer transition">
               ${displayStatus === 'Selesai' ? 'Batalkan' : 'Tandai Selesai'}
             </button>
-            ${isAdmin ? `<button onclick="deleteActivity('${a.id}')" class="text-red-500 text-xs px-2 py-1 cursor-pointer">Hapus</button>` : ''}
+            ${isAdmin ? `
+              <div class="flex items-center gap-1.5 border-l border-slate-200 pl-2">
+                <button onclick='openEditActivityModal(${JSON.stringify(a)})' class="text-xs text-blue-600 font-semibold cursor-pointer">Edit</button>
+                <button onclick="deleteActivity('${a.id}')" class="text-xs text-red-500 font-semibold cursor-pointer">Hapus</button>
+              </div>
+            ` : ''}
           </div>
         </div>
-        <!-- Kolom Isian Catatan (Otomatis tersimpan & di-reset per tanggal) -->
-        <div class="pt-1">
-          <input type="text" id="actNoteInput_${a.id}" dir="auto" value="${escapeHtml(displayNotes)}" placeholder="Isi catatan kegiatan hari ini..." class="w-full border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs bg-white outline-none focus:ring-1 focus:ring-blue-500">
+        <div>
+          <input type="text" id="actNoteInput_${a.id}" dir="auto" value="${escapeHtml(displayNotes)}" placeholder="Isi catatan kegiatan..." class="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs bg-white outline-none focus:ring-1 focus:ring-blue-500">
         </div>
       </div>
     `;
   }).join('');
 }
 
-// --- RENDER RIWAYAT HARIAN GRID ---
+// --- RENDER RIWAYAT HARIAN GRID (Dengan format tanggal profesional) ---
 function renderDailyGrid() {
   let gridContainer = document.getElementById('dailyGridContainer');
   let completed = appData.activities.filter(a => a.status === "Selesai" && a.completedDate);
@@ -248,25 +258,28 @@ function renderDailyGrid() {
     return;
   }
 
-  gridContainer.innerHTML = dates.map(date => `
-    <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-3">
-      <div class="border-b border-slate-100 pb-2 flex justify-between items-center">
-        <h3 class="font-bold text-slate-900 text-sm">📅 ${date}</h3>
-        <span class="text-xs bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-bold">${grouped[date].length} Selesai</span>
+  gridContainer.innerHTML = dates.map(date => {
+    let formattedDate = formatIndonesianDate(date);
+    return `
+      <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+        <div class="border-b border-slate-100 pb-2.5 flex justify-between items-center gap-2 flex-wrap">
+          <h3 class="font-bold text-slate-900 text-xs sm:text-sm">📅 ${formattedDate}</h3>
+          <span class="text-xs bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-full font-bold">${grouped[date].length} Selesai</span>
+        </div>
+        <div class="space-y-2">
+          ${grouped[date].map(item => `
+            <div class="p-3 bg-slate-50 rounded-xl text-xs space-y-1">
+              <div class="font-bold text-slate-800" dir="auto">${escapeHtml(item.activity)}</div>
+              ${item.notes ? `<div class="text-blue-600 font-medium">Catatan: ${escapeHtml(item.notes)}</div>` : ''}
+            </div>
+          `).join('')}
+        </div>
       </div>
-      <div class="space-y-2">
-        ${grouped[date].map(item => `
-          <div class="p-2.5 bg-slate-50 rounded-xl text-xs space-y-1">
-            <div class="font-bold text-slate-800" dir="auto">${escapeHtml(item.activity)}</div>
-            ${item.notes ? `<div class="text-blue-600 font-medium">Catatan: ${escapeHtml(item.notes)}</div>` : ''}
-          </div>
-        `).join('')}
-      </div>
-    </div>
-  `).join('');
+    `;
+  }).join('');
 }
 
-// --- RENDER TARGETS ---
+// --- RENDER TARGETS (Dengan tenggat tanggal terformat) ---
 function renderTargets() {
   let container = document.getElementById('targetContainer');
   let filtered = appData.targets.filter(t => t.category === currentTargetSub);
@@ -277,20 +290,23 @@ function renderTargets() {
     return;
   }
 
-  container.innerHTML = filtered.map(t => `
-    <div class="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-xl">
-      <div>
-        <h4 class="font-bold text-sm text-slate-800 ${t.status === 'Selesai' ? 'line-through text-slate-400' : ''}" dir="auto">${escapeHtml(t.title)}</h4>
-        <p class="text-xs text-slate-500">⏳ Tenggat: ${t.deadline}</p>
+  container.innerHTML = filtered.map(t => {
+    let formattedDeadline = formatIndonesianDate(t.deadline);
+    return `
+      <div class="flex items-center justify-between p-3.5 bg-slate-50 border border-slate-200 rounded-2xl gap-3">
+        <div>
+          <h4 class="font-bold text-sm text-slate-800 ${t.status === 'Selesai' ? 'line-through text-slate-400' : ''}" dir="auto">${escapeHtml(t.title)}</h4>
+          <p class="text-xs text-slate-500 mt-0.5">⏳ Tenggat: ${formattedDeadline}</p>
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+          <button onclick="toggleTargetStatus('${t.id}', '${t.status === 'Selesai' ? 'Belum' : 'Selesai'}')" class="px-3.5 py-1.5 ${t.status === 'Selesai' ? 'bg-amber-500 hover:bg-amber-600' : 'bg-emerald-600 hover:bg-emerald-700'} text-white rounded-xl text-xs font-semibold cursor-pointer transition">
+            ${t.status === 'Selesai' ? 'Batalkan' : 'Selesai'}
+          </button>
+          ${isAdmin ? `<button onclick="deleteTarget('${t.id}')" class="text-red-500 text-xs px-2 py-1 cursor-pointer font-semibold">Hapus</button>` : ''}
+        </div>
       </div>
-      <div class="flex items-center gap-2">
-        <button onclick="toggleTargetStatus('${t.id}', '${t.status === 'Selesai' ? 'Belum' : 'Selesai'}')" class="px-3 py-1.5 ${t.status === 'Selesai' ? 'bg-amber-500 hover:bg-amber-600' : 'bg-emerald-600 hover:bg-emerald-700'} text-white rounded-lg text-xs font-semibold cursor-pointer">
-          ${t.status === 'Selesai' ? 'Batalkan' : 'Selesai'}
-        </button>
-        ${isAdmin ? `<button onclick="deleteTarget('${t.id}')" class="text-red-500 text-xs px-2 py-1 cursor-pointer">Hapus</button>` : ''}
-      </div>
-    </div>
-  `).join('');
+    `;
+  }).join('');
 }
 
 // --- FORM SUBMIT HANDLERS ---
@@ -334,7 +350,7 @@ async function handleTargetSubmit(e) {
   fetchAllData();
 }
 
-// --- USER ACTIONS (MENYIMPAN CATATAN & MENANDAI SELESAI SEKALIGUS) ---
+// --- USER ACTIONS ---
 async function completeActivityWithNotes(id) {
   let notesInput = document.getElementById('actNoteInput_' + id);
   let notesVal = notesInput ? notesInput.value : "";
@@ -353,7 +369,7 @@ async function toggleTargetStatus(id, status) {
   fetchAllData();
 }
 
-// --- ADMIN DELETE & EDIT ---
+// --- ADMIN EDIT & DELETE MODALS ---
 function openEditNoteModal(note) {
   document.getElementById('editNoteId').value = note.id;
   document.getElementById('editNoteTitle').value = note.title;
@@ -377,6 +393,31 @@ async function handleEditNoteSubmit(e) {
   };
   await sendPost(payload);
   closeEditNoteModal();
+  fetchAllData();
+}
+
+// Handler Edit Kegiatan
+function openEditActivityModal(activity) {
+  document.getElementById('editActivityId').value = activity.id;
+  document.getElementById('editActivityNameInput').value = activity.activity;
+  document.getElementById('editActivityModal').classList.remove('hidden');
+}
+
+function closeEditActivityModal() {
+  document.getElementById('editActivityModal').classList.add('hidden');
+}
+
+async function handleEditActivitySubmit(e) {
+  e.preventDefault();
+  let payload = {
+    action: "updateActivity",
+    data: {
+      id: document.getElementById('editActivityId').value,
+      activity: document.getElementById('editActivityNameInput').value
+    }
+  };
+  await sendPost(payload);
+  closeEditActivityModal();
   fetchAllData();
 }
 
