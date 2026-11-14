@@ -1,618 +1,329 @@
 /**
- * FRONTEND CONTROLLER - Dashboard Aktivitas & Target
+ * FRONTEND LOGIC - Dashboard, Aktivitas & Target
  */
 
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw2ZokCXccabnc400X-5Lur1O0nlRhVzVSrd4GpO32CdMW8CZYYB8tODGBP6BqsR9Cjbw/exec";
+// Ganti URL berikut dengan URL deployment Web App Apps Script Anda
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxg-KVAXJetzYnFfwmN1lJUssG-ZrfwMVCGAlX90b-UI832QD8MTwwIdnKuRwvQJ6H-4Q/exec"; 
 
-let activeTab = "activities";
-let currentDailyActivities = [];
-let currentTargets = [];
+let appData = { notes: [], activities: [], targets: [] };
+let isAdmin = false;
+let currentTargetSub = "Usaha";
+let secretClickCount = 0;
 
-document.addEventListener("DOMContentLoaded", () => {
-  initTimeSelectors();
-  
-  const todayStr = formatDateToISO(new Date());
-  document.getElementById("inputDate").value = todayStr;
-  document.getElementById("dashboardFilterDate").value = todayStr;
-  document.getElementById("targetDate").value = todayStr;
-
-  loadDailyActivities();
+// Proteksi DevTools Dasar
+document.addEventListener('keydown', e => {
+  if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && ['I','J','C'].includes(e.key)) || (e.ctrlKey && e.key === 'U')) {
+    e.preventDefault();
+    alert('Akses dibatasi.');
+    return false;
+  }
 });
 
-// Switch Tab Navbar
-function switchTab(tab) {
-  activeTab = tab;
-  const btnAct = document.getElementById("navBtnActivities");
-  const btnTgt = document.getElementById("navBtnTargets");
-  const tabAct = document.getElementById("tabActivities");
-  const tabTgt = document.getElementById("tabTargets");
+window.onload = () => {
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('actDate').value = today;
+  document.getElementById('targetDeadline').value = today;
+  fetchAllData();
+};
 
-  if (tab === "activities") {
-    btnAct.className = "px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition cursor-pointer bg-blue-600 text-white shadow-xs";
-    btnTgt.className = "px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition cursor-pointer bg-slate-100 text-slate-600 hover:bg-slate-200";
-    tabAct.classList.remove("hidden");
-    tabTgt.classList.add("hidden");
-    loadDailyActivities();
-  } else {
-    btnTgt.className = "px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition cursor-pointer bg-emerald-600 text-white shadow-xs";
-    btnAct.className = "px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition cursor-pointer bg-slate-100 text-slate-600 hover:bg-slate-200";
-    tabTgt.classList.remove("hidden");
-    tabAct.classList.add("hidden");
-    loadTargets();
+// Mode Admin Rahasia (Klik 5x pada teks "Selamat Datang, Arifin!" atau tekan Ctrl+Alt+M)
+function secretAdminTrigger() {
+  secretClickCount++;
+  if (secretClickCount >= 5) {
+    toggleAdminMode();
+    secretClickCount = 0;
   }
 }
 
-function refreshCurrentTab() {
-  if (activeTab === "activities") loadDailyActivities();
-  else loadTargets();
+document.addEventListener('keydown', e => {
+  if (e.ctrlKey && e.altKey && e.key.toLowerCase() === 'm') {
+    toggleAdminMode();
+  }
+});
+
+function toggleAdminMode() {
+  isAdmin = !isAdmin;
+  document.getElementById('adminBadge').classList.toggle('hidden', !isAdmin);
+  alert(isAdmin ? "Mode Admin Aktif: Tombol Edit/Hapus Catatan Terbuka." : "Mode Admin Dinonaktifkan.");
+  renderNotes();
 }
 
-function initTimeSelectors() {
-  const hours = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, "0"));
-  const minutes = Array.from({ length: 12 }, (_, i) => String(i * 5).padStart(2, "0"));
-
-  ["startHour", "endHour", "editStartHour", "editEndHour"].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.innerHTML = hours.map(h => `<option value="${h}">${h}</option>`).join("");
-  });
-
-  ["startMinute", "endMinute", "editStartMinute", "editEndMinute"].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.innerHTML = minutes.map(m => `<option value="${m}">${m}</option>`).join("");
-  });
-
-  const now = new Date();
-  const curH = String(now.getHours()).padStart(2, "0");
-  const curM = String(Math.floor(now.getMinutes() / 5) * 5).padStart(2, "0");
-  const nextH = String((now.getHours() + 1) % 24).padStart(2, "0");
-
-  document.getElementById("startHour").value = curH;
-  document.getElementById("startMinute").value = curM;
-  document.getElementById("endHour").value = nextH;
-  document.getElementById("endMinute").value = curM;
-}
-
-// ==========================================
-// 1. LOGIKA AKTIVITAS
-// ==========================================
-
-async function loadDailyActivities() {
-  const loading = document.getElementById("dailyLoading");
-  const container = document.getElementById("dailyContainer");
-  const filterDateVal = document.getElementById("dashboardFilterDate").value;
-
-  loading.classList.remove("hidden");
-  container.classList.add("hidden");
-
-  document.getElementById("dailyDateLabel").innerText = formatDateFullIndo(filterDateVal);
-  document.getElementById("selectedDateText").innerText = formatDateShortIndo(filterDateVal);
-
+async function fetchAllData() {
   try {
-    const res = await fetch(`${APPS_SCRIPT_URL}?action=getDailyActivities&date=${filterDateVal}`);
-    const json = await res.json();
-    loading.classList.add("hidden");
-
+    let res = await fetch(SCRIPT_URL + "?action=getAllData");
+    let json = await res.json();
     if (json.status === "success") {
-      currentDailyActivities = json.data || [];
-      renderDailyList(currentDailyActivities);
-      container.classList.remove("hidden");
-    } else throw new Error(json.message);
+      appData = json.data;
+      renderAll();
+    }
   } catch (err) {
-    loading.classList.add("hidden");
-    container.classList.remove("hidden");
-    container.innerHTML = `<div class="p-4 bg-rose-50 text-rose-600 rounded-xl text-xs font-semibold text-center">Gagal memuat data: ${err.message}</div>`;
+    console.error("Gagal memuat data:", err);
   }
 }
 
-function renderDailyList(activities) {
-  const container = document.getElementById("dailyContainer");
-  document.getElementById("statTotalActivities").innerText = activities.length;
-  container.innerHTML = "";
+function renderAll() {
+  renderNotes();
+  renderActivities();
+  renderTargets();
+}
 
-  if (activities.length === 0) {
-    container.innerHTML = `<div class="text-center py-12 border border-dashed border-slate-200 rounded-xl text-slate-400 text-sm">Belum ada aktivitas yang dicatat untuk tanggal ini.</div>`;
+// --- NAVIGASI UTAMA ---
+function switchMainTab(tab) {
+  ['dashboard', 'aktivitas', 'target'].forEach(t => {
+    document.getElementById('tab' + capitalize(t)).classList.toggle('hidden', t !== tab);
+    let btn = document.getElementById('navMain' + capitalize(t));
+    if (t === tab) {
+      btn.className = "px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition cursor-pointer bg-blue-600 text-white shadow-xs whitespace-nowrap";
+    } else {
+      btn.className = "px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition cursor-pointer bg-slate-100 text-slate-600 hover:bg-slate-200 whitespace-nowrap";
+    }
+  });
+}
+
+// --- NAVIGASI AKTIVITAS ---
+function switchSubAktivitas(sub) {
+  document.getElementById('subContainerKegiatan').classList.toggle('hidden', sub !== 'kegiatan');
+  document.getElementById('subContainerRiwayat').classList.toggle('hidden', sub !== 'riwayat');
+  
+  document.getElementById('subBtnKegiatan').className = sub === 'kegiatan' ? "px-4 py-2 rounded-xl text-xs font-bold bg-blue-600 text-white cursor-pointer transition" : "px-4 py-2 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 cursor-pointer transition";
+  document.getElementById('subBtnRiwayat').className = sub === 'riwayat' ? "px-4 py-2 rounded-xl text-xs font-bold bg-blue-600 text-white cursor-pointer transition" : "px-4 py-2 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 cursor-pointer transition";
+  
+  if (sub === 'riwayat') renderDailyGrid();
+}
+
+// --- NAVIGASI TARGET ---
+function switchSubTarget(cat) {
+  currentTargetSub = cat;
+  ['Usaha', 'Kebutuhan', 'Kewajiban', 'Skripsi'].forEach(c => {
+    let btn = document.getElementById('targetSub' + c);
+    btn.className = c === cat ? "px-4 py-2 rounded-xl text-xs font-bold bg-emerald-600 text-white cursor-pointer transition whitespace-nowrap" : "px-4 py-2 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 cursor-pointer transition whitespace-nowrap";
+  });
+  document.getElementById('targetCategoryInput').value = cat;
+  document.getElementById('targetFormTitle').innerText = "🎯 Tambah Target " + cat;
+  document.getElementById('targetListTitle').innerText = "Daftar Target " + cat;
+  renderTargets();
+}
+
+// --- RENDER NOTES ---
+function renderNotes() {
+  let container = document.getElementById('notesContainer');
+  document.getElementById('statTotalNotes').innerText = appData.notes.length;
+  if (appData.notes.length === 0) {
+    container.innerHTML = `<p class="text-xs text-slate-400 col-span-2 text-center py-6">Belum ada catatan.</p>`;
+    return;
+  }
+  container.innerHTML = appData.notes.map(n => `
+    <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-2 relative">
+      <h3 class="font-bold text-slate-900 text-sm">${escapeHtml(n.title)}</h3>
+      <p class="text-xs text-slate-600 whitespace-pre-wrap">${escapeHtml(n.content)}</p>
+      ${isAdmin ? `
+        <div class="flex gap-2 pt-2 border-t border-slate-100 mt-2">
+          <button onclick='openEditNoteModal(${JSON.stringify(n)})' class="text-xs text-blue-600 font-semibold cursor-pointer">Edit</button>
+          <button onclick="deleteNote('${n.id}')" class="text-xs text-red-600 font-semibold cursor-pointer">Hapus</button>
+        </div>
+      ` : ''}
+    </div>
+  `).join('');
+}
+
+// --- RENDER ACTIVITIES ---
+function renderActivities() {
+  let todoContainer = document.getElementById('todoActivitiesContainer');
+  let todos = appData.activities.filter(a => a.status !== "Selesai");
+
+  if (todos.length === 0) {
+    todoContainer.innerHTML = `<p class="text-xs text-slate-400 text-center py-6">Tidak ada kegiatan tertunda.</p>`;
     return;
   }
 
-  [...activities].sort((a, b) => a.startTime.localeCompare(b.startTime)).forEach(item => {
-    const card = document.createElement("div");
-    card.className = "p-4 rounded-2xl border border-slate-200 bg-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-2xs";
-
-    card.innerHTML = `
-      <div class="space-y-1.5 w-full">
-        <div class="flex items-center gap-2 flex-wrap">
-          <span class="text-xs font-bold text-slate-700 bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200">
-            ⏰ ${escapeHtml(item.startTime)} - ${escapeHtml(item.endTime)}
-          </span>
-          <span class="text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-100 px-2.5 py-1 rounded-lg">
-            ${escapeHtml(item.category)}
-          </span>
-        </div>
-        <h3 class="text-sm font-bold text-slate-900 mt-1">${escapeHtml(item.activity)}</h3>
-        ${item.notes && item.notes !== "-" ? `<p class="text-xs text-slate-600 bg-slate-50 p-2.5 rounded-xl border border-slate-100">📝 ${escapeHtml(item.notes)}</p>` : ""}
+  todoContainer.innerHTML = todos.map(a => `
+    <div class="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-xl">
+      <div>
+        <span class="text-[10px] font-bold px-2 py-0.5 bg-blue-100 text-blue-800 rounded-md">${a.category}</span>
+        <h4 class="font-bold text-sm text-slate-800 mt-1">${escapeHtml(a.activity)}</h4>
+        <p class="text-xs text-slate-500">📅 ${a.date} | ⏰ ${a.startTime} - ${a.endTime}</p>
       </div>
-
-      <div class="flex items-center gap-1.5 shrink-0 self-end sm:self-center border-t sm:border-t-0 pt-2 sm:pt-0 w-full sm:w-auto justify-end">
-        <button onclick="openEditModal('${item.id}')" class="px-3 py-1.5 text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition cursor-pointer">✏️ Edit</button>
-        <button onclick="handleDeleteActivity('${item.id}')" class="px-3 py-1.5 text-xs font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg transition cursor-pointer">🗑️ Hapus</button>
+      <div class="flex items-center gap-2">
+        <button onclick="completeActivity('${a.id}')" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold cursor-pointer">Tandai Selesai</button>
+        <button onclick="deleteActivity('${a.id}')" class="text-red-500 text-xs px-2 py-1 cursor-pointer">Hapus</button>
       </div>
-    `;
-    container.appendChild(card);
+    </div>
+  `).join('');
+}
+
+function renderDailyGrid() {
+  let gridContainer = document.getElementById('dailyGridContainer');
+  let completed = appData.activities.filter(a => a.status === "Selesai");
+
+  let grouped = {};
+  completed.forEach(a => {
+    if (!grouped[a.date]) grouped[a.date] = [];
+    grouped[a.date].push(a);
   });
-}
 
-async function handleFormSubmit(event) {
-  event.preventDefault();
-  const btn = document.getElementById("btnSubmitActivity");
-  const alertBox = document.getElementById("formAlert");
-
-  const startTime = `${document.getElementById("startHour").value}:${document.getElementById("startMinute").value}`;
-  const endTime = `${document.getElementById("endHour").value}:${document.getElementById("endMinute").value}`;
-  const inputDateVal = document.getElementById("inputDate").value;
-
-  const payload = {
-    date: inputDateVal,
-    startTime: startTime,
-    endTime: endTime,
-    category: document.getElementById("inputCategory").value,
-    activity: document.getElementById("inputActivity").value,
-    notes: document.getElementById("inputNotes").value
-  };
-
-  btn.disabled = true;
-  btn.innerText = "Menyimpan...";
-
-  try {
-    const res = await fetch(APPS_SCRIPT_URL, {
-      method: "POST",
-      body: JSON.stringify({ action: "addActivity", data: payload })
-    });
-    const result = await res.json();
-
-    if (result.status === "success") {
-      alertBox.innerText = "Aktivitas berhasil disimpan!";
-      alertBox.className = "text-xs text-center p-2 rounded-lg font-medium bg-emerald-50 text-emerald-700 block border border-emerald-200";
-      document.getElementById("inputActivity").value = "";
-      document.getElementById("inputNotes").value = "";
-      document.getElementById("dashboardFilterDate").value = inputDateVal;
-      loadDailyActivities();
-    } else throw new Error(result.message);
-  } catch (err) {
-    alertBox.innerText = "Gagal: " + err.message;
-    alertBox.className = "text-xs text-center p-2 rounded-lg font-medium bg-rose-50 text-rose-700 block border border-rose-200";
-  } finally {
-    btn.disabled = false;
-    btn.innerText = "+ Simpan Kegiatan";
-    setTimeout(() => alertBox.classList.add("hidden"), 3500);
+  let dates = Object.keys(grouped).sort().reverse();
+  if (dates.length === 0) {
+    gridContainer.innerHTML = `<p class="text-xs text-slate-400 col-span-2 text-center py-6">Belum ada riwayat kegiatan selesai.</p>`;
+    return;
   }
-}
 
-function openEditModal(id) {
-  const item = currentDailyActivities.find(a => String(a.id) === String(id));
-  if (!item) return;
-
-  document.getElementById("editId").value = item.id;
-  document.getElementById("editDate").value = item.date;
-
-  const [sH, sM] = (item.startTime || "00:00").split(":");
-  const [eH, eM] = (item.endTime || "00:00").split(":");
-
-  document.getElementById("editStartHour").value = sH;
-  document.getElementById("editStartMinute").value = sM;
-  document.getElementById("editEndHour").value = eH;
-  document.getElementById("editEndMinute").value = eM;
-
-  document.getElementById("editCategory").value = item.category;
-  document.getElementById("editActivity").value = item.activity;
-  document.getElementById("editNotes").value = item.notes === "-" ? "" : item.notes;
-
-  document.getElementById("editModal").classList.remove("hidden");
-}
-
-function closeEditModal() {
-  document.getElementById("editModal").classList.add("hidden");
-}
-
-async function handleEditSubmit(event) {
-  event.preventDefault();
-  const btn = document.getElementById("btnSaveEdit");
-
-  const startTime = `${document.getElementById("editStartHour").value}:${document.getElementById("editStartMinute").value}`;
-  const endTime = `${document.getElementById("editEndHour").value}:${document.getElementById("editEndMinute").value}`;
-
-  const payload = {
-    id: document.getElementById("editId").value,
-    date: document.getElementById("editDate").value,
-    startTime: startTime,
-    endTime: endTime,
-    category: document.getElementById("editCategory").value,
-    activity: document.getElementById("editActivity").value,
-    notes: document.getElementById("editNotes").value
-  };
-
-  btn.disabled = true;
-  btn.innerText = "Menyimpan...";
-
-  try {
-    const res = await fetch(APPS_SCRIPT_URL, {
-      method: "POST",
-      body: JSON.stringify({ action: "updateActivity", data: payload })
-    });
-    const result = await res.json();
-
-    if (result.status === "success") {
-      closeEditModal();
-      loadDailyActivities();
-    } else alert("Gagal update: " + result.message);
-  } catch (err) {
-    alert("Error: " + err.message);
-  } finally {
-    btn.disabled = false;
-    btn.innerText = "Simpan Perubahan";
-  }
-}
-
-async function handleDeleteActivity(id) {
-  if (!confirm("Apakah Anda yakin ingin menghapus aktivitas ini?")) return;
-  try {
-    const res = await fetch(APPS_SCRIPT_URL, {
-      method: "POST",
-      body: JSON.stringify({ action: "deleteActivity", id: id })
-    });
-    const result = await res.json();
-    if (result.status === "success") loadDailyActivities();
-    else alert("Gagal menghapus: " + result.message);
-  } catch (err) {
-    alert("Error: " + err.message);
-  }
-}
-
-// ==========================================
-// 2. LOGIKA TARGET (PEMISAHAN TERLAKSANA & PENGELOMPOKAN BULAN)
-// ==========================================
-
-async function loadTargets() {
-  const loading = document.getElementById("targetLoading");
-  const activeSection = document.getElementById("activeTargetSection");
-  const completedSection = document.getElementById("completedTargetSection");
-
-  loading.classList.remove("hidden");
-  activeSection.classList.add("hidden");
-  completedSection.classList.add("hidden");
-
-  try {
-    const res = await fetch(`${APPS_SCRIPT_URL}?action=getTargets`);
-    const json = await res.json();
-    loading.classList.add("hidden");
-
-    if (json.status === "success") {
-      currentTargets = json.data || [];
-      renderTargetList(currentTargets);
-      activeSection.classList.remove("hidden");
-      completedSection.classList.remove("hidden");
-    } else throw new Error(json.message);
-  } catch (err) {
-    loading.classList.remove("hidden");
-    loading.innerHTML = `<div class="p-4 bg-rose-50 text-rose-600 rounded-xl text-xs font-semibold text-center">Gagal memuat target: ${err.message}</div>`;
-  }
-}
-
-function renderTargetList(targets) {
-  const activeContainer = document.getElementById("activeTargetContainer");
-  const completedContainer = document.getElementById("completedTargetContainer");
-
-  const statActive = document.getElementById("statActiveTargets");
-  const statCompleted = document.getElementById("statCompletedTargets");
-  const badgeActive = document.getElementById("badgeActiveCount");
-  const badgeCompleted = document.getElementById("badgeCompletedCount");
-
-  activeContainer.innerHTML = "";
-  completedContainer.innerHTML = "";
-
-  // Pisahkan Target Belum & Sudah Dilaksanakan
-  const activeTargets = targets.filter(t => t.status !== "Sudah" && t.status !== "Selesai");
-  const completedTargets = targets.filter(t => t.status === "Sudah" || t.status === "Selesai");
-
-  // Update Statistik
-  statActive.innerText = activeTargets.length;
-  badgeActive.innerText = activeTargets.length;
-  statCompleted.innerText = completedTargets.length;
-  badgeCompleted.innerText = completedTargets.length;
-
-  // 1. RENDER TARGET BELUM DILAKSANAKAN (Urut Tanggal Terdekat)
-  const sortedActive = [...activeTargets].sort((a, b) => new Date(a.targetDate) - new Date(b.targetDate));
-
-  if (sortedActive.length === 0) {
-    activeContainer.innerHTML = `<div class="text-center py-6 border border-dashed border-slate-200 rounded-xl text-slate-400 text-xs">Tidak ada target aktif yang belum dilaksanakan.</div>`;
-  } else {
-    sortedActive.forEach(item => {
-      const card = document.createElement("div");
-      card.className = "p-4 rounded-2xl border border-slate-200 bg-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition hover:border-slate-300 shadow-2xs";
-
-      card.innerHTML = `
-        <div class="space-y-1 w-full">
-          <div class="flex items-center gap-2 flex-wrap">
-            <span class="text-xs font-semibold text-slate-600 bg-slate-100 px-2.5 py-0.5 rounded-md border border-slate-200">
-              📅 ${formatDateFullIndo(item.targetDate)}
-            </span>
-            <span class="text-xs font-bold bg-amber-100 text-amber-700 border border-amber-300 px-2.5 py-0.5 rounded-md">
-              ⏳ Belum Dilaksanakan
-            </span>
+  gridContainer.innerHTML = dates.map(date => `
+    <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+      <div class="border-b border-slate-100 pb-2 flex justify-between items-center">
+        <h3 class="font-bold text-slate-900 text-sm">📅 ${date}</h3>
+        <span class="text-xs bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-bold">${grouped[date].length} Kegiatan</span>
+      </div>
+      <div class="space-y-2">
+        ${grouped[date].map(item => `
+          <div class="p-2.5 bg-slate-50 rounded-xl text-xs space-y-1">
+            <div class="font-bold text-slate-800">${escapeHtml(item.activity)}</div>
+            <div class="text-slate-500">${item.category} • ⏰ ${item.startTime} - ${item.endTime}</div>
           </div>
-          <h3 class="text-base font-bold text-slate-900">${escapeHtml(item.title)}</h3>
-        </div>
-
-        <div class="flex items-center gap-1.5 shrink-0 self-end sm:self-center">
-          <button onclick="openEditTargetModal('${item.id}')" class="px-3 py-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition cursor-pointer">
-            ✏️ Edit
-          </button>
-          <button onclick="toggleTargetStatus('${item.id}', 'Sudah')" class="px-3 py-1.5 text-xs font-bold bg-emerald-600 text-white hover:bg-emerald-700 rounded-lg transition cursor-pointer flex items-center gap-1 shadow-xs">
-            ✓ Tandai Sudah
-          </button>
-          <button onclick="handleDeleteTarget('${item.id}')" class="px-3 py-1.5 text-xs font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg transition cursor-pointer">
-            🗑️
-          </button>
-        </div>
-      `;
-      activeContainer.appendChild(card);
-    });
-  }
-
-  // 2. RENDER TARGET SUDAH DILAKSANAKAN (Kelompokkan Per Bulan & Tahun)
-  if (completedTargets.length === 0) {
-    completedContainer.innerHTML = `<div class="text-center py-6 border border-dashed border-slate-200 rounded-xl text-slate-400 text-xs">Belum ada target yang diselesaikan.</div>`;
-  } else {
-    const groupedByMonth = {};
-    const sortedCompleted = [...completedTargets].sort((a, b) => new Date(b.targetDate) - new Date(a.targetDate));
-
-    sortedCompleted.forEach(item => {
-      const monthYearKey = getMonthYearTitle(item.targetDate);
-      if (!groupedByMonth[monthYearKey]) {
-        groupedByMonth[monthYearKey] = [];
-      }
-      groupedByMonth[monthYearKey].push(item);
-    });
-
-    Object.keys(groupedByMonth).forEach(monthGroup => {
-      const monthSection = document.createElement("div");
-      monthSection.className = "space-y-3";
-
-      let monthHtml = `
-        <div class="flex items-center gap-2 border-b border-slate-100 pb-1.5">
-          <span class="text-xs font-extrabold text-slate-700 uppercase tracking-wider bg-slate-100 px-3 py-1 rounded-lg border border-slate-200">
-            🗓️ ${monthGroup}
-          </span>
-          <span class="text-xs text-slate-400 font-semibold">(${groupedByMonth[monthGroup].length} Target)</span>
-        </div>
-        <div class="space-y-2.5">
-      `;
-
-      groupedByMonth[monthGroup].forEach(item => {
-        monthHtml += `
-          <div class="p-3.5 rounded-xl border border-emerald-200 bg-emerald-50/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-            <div class="space-y-1 w-full">
-              <div class="flex items-center gap-2 flex-wrap">
-                <span class="text-xs font-semibold text-slate-500 bg-white px-2 py-0.5 rounded-md border border-slate-200">
-                  📅 ${formatDateFullIndo(item.targetDate)}
-                </span>
-                <span class="text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 px-2 py-0.5 rounded-md">
-                  ✓ Sudah Dilaksanakan
-                </span>
-              </div>
-              <h4 class="text-sm font-bold text-slate-800 line-through decoration-emerald-600/60">${escapeHtml(item.title)}</h4>
-            </div>
-
-            <div class="flex items-center gap-1.5 shrink-0 self-end sm:self-center">
-              <button onclick="toggleTargetStatus('${item.id}', 'Belum')" class="px-2.5 py-1 text-xs font-semibold bg-amber-100 text-amber-800 hover:bg-amber-200 rounded-lg transition cursor-pointer">
-                ↩️ Batalkan
-              </button>
-              <button onclick="handleDeleteTarget('${item.id}')" class="px-2.5 py-1 text-xs font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg transition cursor-pointer">
-                🗑️
-              </button>
-            </div>
-          </div>
-        `;
-      });
-
-      monthHtml += `</div>`;
-      monthSection.innerHTML = monthHtml;
-      completedContainer.appendChild(monthSection);
-    });
-  }
+        `).join('')}
+      </div>
+    </div>
+  `).join('');
 }
 
-async function handleTargetSubmit(event) {
-  event.preventDefault();
-  const btn = document.getElementById("btnSubmitTarget");
-  const alertBox = document.getElementById("targetFormAlert");
+// --- RENDER TARGETS ---
+function renderTargets() {
+  let container = document.getElementById('targetContainer');
+  let filtered = appData.targets.filter(t => t.category === currentTargetSub);
+  document.getElementById('targetCountBadge').innerText = filtered.length;
 
-  const payload = {
-    title: document.getElementById("targetTitle").value,
-    targetDate: document.getElementById("targetDate").value
+  if (filtered.length === 0) {
+    container.innerHTML = `<p class="text-xs text-slate-400 text-center py-6">Belum ada target untuk kategori ${currentTargetSub}.</p>`;
+    return;
+  }
+
+  container.innerHTML = filtered.map(t => `
+    <div class="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-xl">
+      <div>
+        <h4 class="font-bold text-sm text-slate-800 ${t.status === 'Selesai' ? 'line-through text-slate-400' : ''}">${escapeHtml(t.title)}</h4>
+        <p class="text-xs text-slate-500">⏳ Tenggat: ${t.deadline}</p>
+      </div>
+      <div class="flex items-center gap-2">
+        <button onclick="toggleTargetStatus('${t.id}', '${t.status === 'Selesai' ? 'Belum' : 'Selesai'}')" class="px-3 py-1.5 ${t.status === 'Selesai' ? 'bg-amber-500 hover:bg-amber-600' : 'bg-emerald-600 hover:bg-emerald-700'} text-white rounded-lg text-xs font-semibold cursor-pointer">
+          ${t.status === 'Selesai' ? 'Batalkan' : 'Selesai'}
+        </button>
+        <button onclick="deleteTarget('${t.id}')" class="text-red-500 text-xs px-2 py-1 cursor-pointer">Hapus</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+// --- FORM HANDLERS & API CALLS ---
+async function handleNoteSubmit(e) {
+  e.preventDefault();
+  let payload = { action: "addNote", data: { title: document.getElementById('noteTitle').value, content: document.getElementById('noteContent').value } };
+  await sendPost(payload);
+  document.getElementById('noteForm').reset();
+  fetchAllData();
+}
+
+async function handleActivitySubmit(e) {
+  e.preventDefault();
+  let payload = {
+    action: "addActivity",
+    data: {
+      date: document.getElementById('actDate').value,
+      startTime: document.getElementById('actStart').value,
+      endTime: document.getElementById('actEnd').value,
+      category: document.getElementById('actCategory').value,
+      activity: document.getElementById('actName').value,
+      notes: document.getElementById('actNotes').value
+    }
   };
-
-  btn.disabled = true;
-  btn.innerText = "Menyimpan...";
-
-  try {
-    const res = await fetch(APPS_SCRIPT_URL, {
-      method: "POST",
-      body: JSON.stringify({ action: "addTarget", data: payload })
-    });
-    const result = await res.json();
-
-    if (result.status === "success") {
-      alertBox.innerText = "Target berhasil ditambahkan!";
-      alertBox.className = "text-xs text-center p-2 rounded-lg font-medium bg-emerald-50 text-emerald-700 block border border-emerald-200";
-      document.getElementById("targetTitle").value = "";
-      loadTargets();
-    } else throw new Error(result.message);
-  } catch (err) {
-    alertBox.innerText = "Gagal: " + err.message;
-    alertBox.className = "text-xs text-center p-2 rounded-lg font-medium bg-rose-50 text-rose-700 block border border-rose-200";
-  } finally {
-    btn.disabled = false;
-    btn.innerText = "+ Simpan Target";
-    setTimeout(() => alertBox.classList.add("hidden"), 3500);
-  }
+  await sendPost(payload);
+  document.getElementById('activityForm').reset();
+  fetchAllData();
 }
 
-function openEditTargetModal(id) {
-  const item = currentTargets.find(t => String(t.id) === String(id));
-  if (!item) return;
-
-  document.getElementById("editTargetId").value = item.id;
-  document.getElementById("editTargetTitle").value = item.title;
-  document.getElementById("editTargetDate").value = item.targetDate;
-
-  document.getElementById("editTargetModal").classList.remove("hidden");
-}
-
-function closeEditTargetModal() {
-  document.getElementById("editTargetModal").classList.add("hidden");
-}
-
-async function handleEditTargetSubmit(event) {
-  event.preventDefault();
-  const btn = document.getElementById("btnSaveEditTarget");
-
-  const payload = {
-    id: document.getElementById("editTargetId").value,
-    title: document.getElementById("editTargetTitle").value,
-    targetDate: document.getElementById("editTargetDate").value
+async function handleTargetSubmit(e) {
+  e.preventDefault();
+  let payload = {
+    action: "addTarget",
+    data: {
+      title: document.getElementById('targetTitle').value,
+      category: document.getElementById('targetCategoryInput').value,
+      deadline: document.getElementById('targetDeadline').value
+    }
   };
+  await sendPost(payload);
+  document.getElementById('targetTitle').value = '';
+  fetchAllData();
+}
 
-  btn.disabled = true;
-  btn.innerText = "Menyimpan...";
+async function completeActivity(id) {
+  await sendPost({ action: "completeActivity", id: id });
+  fetchAllData();
+}
 
+async function deleteActivity(id) {
+  if (confirm("Hapus kegiatan ini?")) {
+    await sendPost({ action: "deleteActivity", id: id });
+    fetchAllData();
+  }
+}
+
+async function toggleTargetStatus(id, status) {
+  await sendPost({ action: "toggleTargetStatus", id: id, status: status });
+  fetchAllData();
+}
+
+async function deleteTarget(id) {
+  if (confirm("Hapus target ini?")) {
+    await sendPost({ action: "deleteTarget", id: id });
+    fetchAllData();
+  }
+}
+
+// Modal Edit Catatan Admin
+function openEditNoteModal(note) {
+  document.getElementById('editNoteId').value = note.id;
+  document.getElementById('editNoteTitle').value = note.title;
+  document.getElementById('editNoteContent').value = note.content;
+  document.getElementById('editNoteModal').classList.remove('hidden');
+}
+
+function closeEditNoteModal() {
+  document.getElementById('editNoteModal').classList.add('hidden');
+}
+
+async function handleEditNoteSubmit(e) {
+  e.preventDefault();
+  let payload = {
+    action: "updateNote",
+    data: {
+      id: document.getElementById('editNoteId').value,
+      title: document.getElementById('editNoteTitle').value,
+      content: document.getElementById('editNoteContent').value
+    }
+  };
+  await sendPost(payload);
+  closeEditNoteModal();
+  fetchAllData();
+}
+
+async function deleteNote(id) {
+  if (confirm("Hapus catatan ini?")) {
+    await sendPost({ action: "deleteNote", id: id });
+    fetchAllData();
+  }
+}
+
+async function sendPost(payload) {
   try {
-    const res = await fetch(APPS_SCRIPT_URL, {
+    await fetch(SCRIPT_URL, {
       method: "POST",
-      body: JSON.stringify({ action: "updateTarget", data: payload })
+      body: JSON.stringify(payload)
     });
-    const result = await res.json();
-
-    if (result.status === "success") {
-      closeEditTargetModal();
-      loadTargets();
-    } else alert("Gagal update target: " + result.message);
   } catch (err) {
-    alert("Error: " + err.message);
-  } finally {
-    btn.disabled = false;
-    btn.innerText = "Simpan Perubahan";
+    console.error("Error POST:", err);
   }
 }
 
-async function toggleTargetStatus(id, newStatus) {
-  try {
-    const res = await fetch(APPS_SCRIPT_URL, {
-      method: "POST",
-      body: JSON.stringify({ action: "toggleTargetStatus", id: id, status: newStatus })
-    });
-    const result = await res.json();
-    if (result.status === "success") loadTargets();
-    else alert("Gagal update status: " + result.message);
-  } catch (err) {
-    alert("Error: " + err.message);
-  }
-}
-
-async function handleDeleteTarget(id) {
-  if (!confirm("Apakah Anda yakin ingin menghapus target ini?")) return;
-  try {
-    const res = await fetch(APPS_SCRIPT_URL, {
-      method: "POST",
-      body: JSON.stringify({ action: "deleteTarget", id: id })
-    });
-    const result = await res.json();
-    if (result.status === "success") loadTargets();
-    else alert("Gagal menghapus target: " + result.message);
-  } catch (err) {
-    alert("Error: " + err.message);
-  }
-}
-
-// ==========================================
-// HELPERS (Format Tanggal & Nama Hari Bahasa Indonesia)
-// ==========================================
-
-function formatDateToISO(date) {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-}
-
-function getMonthYearTitle(dateStr) {
-  if (!dateStr) return "Lainnya";
-  let cleanStr = String(dateStr).trim();
-  const months = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
-
-  if (cleanStr.includes("/")) {
-    const d = new Date(cleanStr);
-    if (!isNaN(d.getTime())) return `${months[d.getMonth()]} ${d.getFullYear()}`;
-  } else if (cleanStr.includes("-")) {
-    const parts = cleanStr.split("-");
-    if (parts.length === 3) {
-      let y = parseInt(parts[0]);
-      let m = parseInt(parts[1]) - 1;
-      return `${months[m]} ${y}`;
-    }
-  }
-  return "Lainnya";
-}
-
-function formatDateFullIndo(dateStr) {
-  if (!dateStr) return "";
-  let cleanStr = String(dateStr).trim();
-  
-  const days = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
-  const months = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
-
-  if (cleanStr.includes("/")) {
-    const dateObj = new Date(cleanStr);
-    if (!isNaN(dateObj.getTime())) {
-      return `${days[dateObj.getDay()]}, ${dateObj.getDate()} ${months[dateObj.getMonth()]} ${dateObj.getFullYear()}`;
-    }
-  } else if (cleanStr.includes("-")) {
-    const parts = cleanStr.split("-");
-    if (parts.length === 3) {
-      let y = parseInt(parts[0]);
-      let m = parseInt(parts[1]) - 1;
-      let d = parseInt(parts[2]);
-      const dateObj = new Date(y, m, d);
-      if (!isNaN(dateObj.getTime())) {
-        return `${days[dateObj.getDay()]}, ${d} ${months[m]} ${y}`;
-      }
-    }
-  }
-  return cleanStr;
-}
-
-function formatDateShortIndo(dateStr) {
-  if (!dateStr) return "";
-  let cleanStr = String(dateStr).trim();
-  const months = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Ags", "Sep", "Okt", "Nov", "Des"];
-
-  if (cleanStr.includes("/")) {
-    const d = new Date(cleanStr);
-    if (!isNaN(d.getTime())) {
-      return `${d.getDate()} ${months[d.getMonth()]}`;
-    }
-  } else if (cleanStr.includes("-")) {
-    const parts = cleanStr.split("-");
-    if (parts.length === 3) {
-      let y = parseInt(parts[0]);
-      let m = parseInt(parts[1]) - 1;
-      let d = parseInt(parts[2]);
-      const dateObj = new Date(y, m, d);
-      if (!isNaN(dateObj.getTime())) {
-        return `${d} ${months[m]}`;
-      }
-    }
-  }
-  return cleanStr;
-}
-
+function capitalize(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
 function escapeHtml(text) {
-  if (!text) return "";
   return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
 }
