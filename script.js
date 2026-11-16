@@ -1,5 +1,5 @@
 /**
- * FRONTEND LOGIC - 1% Daily Habit & Activity Tracker
+ * FRONTEND LOGIC - 1% Daily Habit & Activity Tracker (Routine Template & Daily Logging)
  */
 
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwxuC3hpMkGKuXF7s-_GNu2azKPFABghIWRwj8BWlhk8p-062wH0hCL0W3zmNAfrX0QJQ/exec"; 
@@ -122,7 +122,7 @@ function toggleAdminMode(status) {
   renderNotes();
   renderActivities();
   renderTargets();
-  alert(isAdmin ? "Mode Admin Aktif! Tombol Edit & Hapus terbuka." : "Mode Admin Dinonaktifkan.");
+  alert(isAdmin ? "Mode Admin Aktif! Tombol Tambah & Hapus Kegiatan Terbuka." : "Mode Admin Dinonaktifkan.");
 }
 
 async function fetchAllData() {
@@ -152,30 +152,19 @@ function renderAll() {
   renderTargets();
 }
 
-// --- NAVIGASI UTAMA (Sinkron Desktop & Mobile) ---
+// --- NAVIGASI UTAMA ---
 function switchMainTab(tab) {
   ['dashboard', 'aktivitas', 'target'].forEach(t => {
-    // Tampilkan / Sembunyikan Konten Tab
     document.getElementById('tab' + capitalize(t)).classList.toggle('hidden', t !== tab);
     
-    // Sinkron Tombol Atas (Desktop)
     let topBtn = document.getElementById('navMain' + capitalize(t));
     if (topBtn) {
-      if (t === tab) {
-        topBtn.className = "px-3.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer bg-blue-600 text-white shadow-xs whitespace-nowrap";
-      } else {
-        topBtn.className = "px-3.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer bg-slate-100 text-slate-600 hover:bg-slate-200 whitespace-nowrap";
-      }
+      topBtn.className = t === tab ? "px-3.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer bg-blue-600 text-white shadow-xs whitespace-nowrap" : "px-3.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer bg-slate-100 text-slate-600 hover:bg-slate-200 whitespace-nowrap";
     }
 
-    // Sinkron Bottom Nav (Mobile)
     let botBtn = document.getElementById('navBar' + capitalize(t));
     if (botBtn) {
-      if (t === tab) {
-        botBtn.className = "flex flex-col items-center gap-1 text-blue-600 transition cursor-pointer font-bold";
-      } else {
-        botBtn.className = "flex flex-col items-center gap-1 text-slate-400 hover:text-slate-600 transition cursor-pointer font-semibold";
-      }
+      botBtn.className = t === tab ? "flex flex-col items-center gap-1 text-blue-600 transition cursor-pointer font-bold" : "flex flex-col items-center gap-1 text-slate-400 hover:text-slate-600 transition cursor-pointer font-semibold";
     }
   });
 }
@@ -272,45 +261,90 @@ function selectNote(id) {
   renderNotes();
 }
 
-// --- RENDER ACTIVITIES ---
+// --- RENDER ACTIVITIES (ROUTINE TEMPLATE PER DAY) ---
 function renderActivities() {
   let todoContainer = document.getElementById('todoActivitiesContainer');
-  let todos = appData.activities;
+  
+  // Ambil daftar unik nama kegiatan rutin yang dibuat admin
+  let routineNames = [...new Set(appData.activities.map(a => a.activity))].filter(Boolean);
 
-  if (todos.length === 0) {
-    todoContainer.innerHTML = `<p class="text-xs text-slate-400 text-center py-6">Belum ada kegiatan harian.</p>`;
+  if (routineNames.length === 0) {
+    todoContainer.innerHTML = `<p class="text-xs text-slate-400 text-center py-6">Belum ada kegiatan rutin. (Admin dapat menambahkan kegiatan di bawah)</p>`;
     return;
   }
 
-  const todayStr = new Date().toISOString().split('T')[0];
-  let isDifferentDay = (currentSelectedDate !== todayStr);
-
-  todoContainer.innerHTML = todos.map(a => {
-    let displayStatus = isDifferentDay ? "Belum" : a.status;
-    let displayNotes = isDifferentDay ? "" : (a.notes || "");
+  todoContainer.innerHTML = routineNames.map(name => {
+    // Cari record untuk kegiatan ini pada tanggal yang sedang dipilih (currentSelectedDate)
+    let record = appData.activities.find(a => a.activity === name && a.date === currentSelectedDate);
+    let status = record ? record.status : "Belum";
+    let notes = record ? (record.notes || "") : "";
+    let recordId = record ? record.id : "";
 
     return `
       <div class="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl space-y-2.5">
         <div class="flex items-center justify-between gap-2 flex-wrap">
-          <h4 class="font-bold text-sm text-slate-800" dir="auto">${escapeHtml(a.activity)}</h4>
+          <h4 class="font-bold text-sm text-slate-800" dir="auto">⚡ ${escapeHtml(name)}</h4>
           <div class="flex items-center gap-2">
-            <button onclick="completeActivityWithNotes('${a.id}')" class="px-3 py-1.5 ${displayStatus === 'Selesai' ? 'bg-amber-500 hover:bg-amber-600' : 'bg-emerald-600 hover:bg-emerald-700'} text-white rounded-xl text-xs font-semibold cursor-pointer transition">
-              ${displayStatus === 'Selesai' ? 'Batalkan' : 'Tandai Selesai'}
+            <button onclick="handleRoutineAction('${escapeHtml(name)}', '${recordId}')" class="px-3.5 py-1.5 ${status === 'Selesai' ? 'bg-amber-500 hover:bg-amber-600' : 'bg-emerald-600 hover:bg-emerald-700'} text-white rounded-xl text-xs font-semibold cursor-pointer transition">
+              ${status === 'Selesai' ? 'Batalkan' : 'Tandai Selesai'}
             </button>
             ${isAdmin ? `
               <div class="flex items-center gap-1.5 border-l border-slate-200 pl-2">
-                <button onclick='openEditActivityModal(${JSON.stringify(a)})' class="text-xs text-blue-600 font-semibold cursor-pointer">Edit</button>
-                <button onclick="deleteActivity('${a.id}')" class="text-xs text-red-500 font-semibold cursor-pointer">Hapus</button>
+                <button onclick="deleteRoutineByName('${escapeHtml(name)}')" class="text-xs text-red-500 font-semibold cursor-pointer">Hapus Master</button>
               </div>
             ` : ''}
           </div>
         </div>
         <div>
-          <input type="text" id="actNoteInput_${a.id}" dir="auto" value="${escapeHtml(displayNotes)}" placeholder="Isi catatan kegiatan..." class="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs bg-white outline-none focus:ring-1 focus:ring-blue-500">
+          <input type="text" id="routineNoteInput_${escapeHtml(name)}" dir="auto" value="${escapeHtml(notes)}" placeholder="Isi catatan harian (contoh: 10 kali)..." class="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs bg-white outline-none focus:ring-1 focus:ring-blue-500">
         </div>
       </div>
     `;
   }).join('');
+}
+
+// Aksi Tandai Selesai / Batalkan per Hari untuk Kegiatan Rutin
+async function handleRoutineAction(activityName, recordId) {
+  let noteInput = document.getElementById('routineNoteInput_' + activityName);
+  let notesVal = noteInput ? noteInput.value : "";
+
+  if (!recordId) {
+    // Jika record untuk tanggal ini belum ada, buat baris baru untuk tanggal tersebut
+    let addRes = await sendPost({
+      action: "addActivity",
+      data: {
+        date: currentSelectedDate,
+        activity: activityName
+      }
+    });
+
+    if (addRes) {
+      // Ambil ulang data terbaru untuk mendapatkan ID record tanggal tersebut
+      let res = await fetch(SCRIPT_URL + "?action=getAllData");
+      let json = await res.json();
+      if (json.status === "success") {
+        appData = json.data;
+        let newRecord = appData.activities.find(a => a.activity === activityName && a.date === currentSelectedDate);
+        if (newRecord) {
+          await sendPost({
+            action: "completeActivity",
+            id: newRecord.id,
+            notes: notesVal,
+            selectedDate: currentSelectedDate
+          });
+        }
+      }
+    }
+  } else {
+    // Jika record sudah ada, update status & catatan di tanggal tersebut
+    await sendPost({
+      action: "completeActivity",
+      id: recordId,
+      notes: notesVal,
+      selectedDate: currentSelectedDate
+    });
+  }
+  fetchAllData();
 }
 
 // --- RENDER RIWAYAT GRID ---
@@ -342,7 +376,7 @@ function renderDailyGrid() {
         <div class="space-y-2">
           ${grouped[date].map(item => `
             <div class="p-3 bg-slate-50 rounded-xl text-xs space-y-1">
-              <div class="font-bold text-slate-800" dir="auto">${escapeHtml(item.activity)}</div>
+              <div class="font-bold text-slate-800" dir="auto">⚡ ${escapeHtml(item.activity)}</div>
               ${item.notes ? `<div class="text-blue-600 font-medium">Catatan: ${escapeHtml(item.notes)}</div>` : ''}
             </div>
           `).join('')}
@@ -478,19 +512,6 @@ async function handleTargetSubmit(e) {
   fetchAllData();
 }
 
-async function completeActivityWithNotes(id) {
-  let notesInput = document.getElementById('actNoteInput_' + id);
-  let notesVal = notesInput ? notesInput.value : "";
-  
-  await sendPost({ 
-    action: "completeActivity", 
-    id: id, 
-    notes: notesVal, 
-    selectedDate: currentSelectedDate 
-  });
-  fetchAllData();
-}
-
 async function toggleTargetStatus(id, status) {
   await sendPost({ action: "toggleTargetStatus", id: id, status: status });
   fetchAllData();
@@ -523,30 +544,6 @@ async function handleEditNoteSubmit(e) {
   fetchAllData();
 }
 
-function openEditActivityModal(activity) {
-  document.getElementById('editActivityId').value = activity.id;
-  document.getElementById('editActivityNameInput').value = activity.activity;
-  document.getElementById('editActivityModal').classList.remove('hidden');
-}
-
-function closeEditActivityModal() {
-  document.getElementById('editActivityModal').classList.add('hidden');
-}
-
-async function handleEditActivitySubmit(e) {
-  e.preventDefault();
-  let payload = {
-    action: "updateActivity",
-    data: {
-      id: document.getElementById('editActivityId').value,
-      activity: document.getElementById('editActivityNameInput').value
-    }
-  };
-  await sendPost(payload);
-  closeEditActivityModal();
-  fetchAllData();
-}
-
 async function deleteNote(id) {
   if (confirm("Hapus catatan ini?")) {
     await sendPost({ action: "deleteNote", id: id });
@@ -554,9 +551,12 @@ async function deleteNote(id) {
   }
 }
 
-async function deleteActivity(id) {
-  if (confirm("Hapus kegiatan ini?")) {
-    await sendPost({ action: "deleteActivity", id: id });
+async function deleteRoutineByName(activityName) {
+  if (confirm(`Hapus kegiatan "${activityName}" beserta seluruh riwayatnya?`)) {
+    let matching = appData.activities.filter(a => a.activity === activityName);
+    for (let item of matching) {
+      await sendPost({ action: "deleteActivity", id: item.id });
+    }
     fetchAllData();
   }
 }
