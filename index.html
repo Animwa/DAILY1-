@@ -15,27 +15,23 @@
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
   </style>
 </head>
-<body class="bg-slate-100 min-h-screen text-slate-800 p-3 sm:p-6 md:p-8" oncontextmenu="return false;">
+<body class="bg-slate-100 min-h-screen text-slate-800 p-3 sm:p-6 md:p-8 pb-24 md:pb-8" oncontextmenu="return false;">
 
   <div class="max-w-6xl mx-auto space-y-4 sm:space-y-6">
     
-    <!-- Navbar Utama -->
-    <nav class="bg-white p-2.5 sm:p-3 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row items-center justify-between gap-3">
-      <div class="flex items-center gap-2 w-full md:w-auto overflow-x-auto no-scrollbar pb-1 md:pb-0">
-        <button onclick="switchMainTab('dashboard')" id="navMainDashboard" class="px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition cursor-pointer bg-blue-600 text-white shadow-xs whitespace-nowrap shrink-0">
-          🏠 Dashboard
-        </button>
-        <button onclick="switchMainTab('aktivitas')" id="navMainAktivitas" class="px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition cursor-pointer bg-slate-100 text-slate-600 hover:bg-slate-200 whitespace-nowrap shrink-0">
-          📋 Aktivitas Harian
-        </button>
-        <button onclick="switchMainTab('target')" id="navMainTarget" class="px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition cursor-pointer bg-slate-100 text-slate-600 hover:bg-slate-200 whitespace-nowrap shrink-0">
-          🎯 Target & Sasaran
-        </button>
+    <!-- Navbar Atas (Desktop & Header Mobile) -->
+    <nav class="bg-white p-3 sm:p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between gap-3">
+      <div class="flex items-center gap-2">
+        <span class="text-xl">⚡</span>
+        <div>
+          <h1 class="text-xs sm:text-sm font-bold text-slate-900 leading-tight">1% Daily Habit App</h1>
+          <span class="text-[10px] text-slate-500">Better Every Day</span>
+        </div>
       </div>
-      <div class="flex items-center justify-between md:justify-end gap-2 w-full md:w-auto border-t md:border-t-0 pt-2 md:pt-0 border-slate-100">
-        <span id="adminBadge" class="hidden bg-amber-100 text-amber-800 text-[10px] font-bold px-2.5 py-1 rounded-md">Mode Admin Aktif</span>
-        <button onclick="fetchAllData()" class="w-full md:w-auto bg-slate-50 border border-slate-200 px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-100 transition flex items-center justify-center gap-1.5 cursor-pointer">
-          🔄 Sinkronisasi
+      <div class="flex items-center gap-2">
+        <span id="adminBadge" class="hidden bg-amber-100 text-amber-800 text-[10px] font-bold px-2.5 py-1 rounded-md">Admin Aktif</span>
+        <button onclick="fetchAllData()" class="bg-slate-50 border border-slate-200 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-100 transition flex items-center gap-1.5 cursor-pointer">
+          🔄 <span class="hidden sm:inline">Sinkronisasi</span>
         </button>
       </div>
     </nav>
@@ -44,40 +40,55 @@
     <div id="tabDashboard" class="space-y-4 sm:space-y-6">
       <div class="bg-gradient-to-r from-slate-900 to-blue-950 text-white rounded-2xl p-5 sm:p-6 shadow-md border border-slate-800 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
-          <h1 class="text-lg sm:text-xl font-bold cursor-pointer select-none leading-snug" onclick="secretAdminTrigger()">Selamat Datang, Arifin! (1% Better Every Day)</h1>
-          <p class="text-xs sm:text-sm text-slate-300 mt-1">Catat hal penting agar selalu tampil di dashboard utama Anda.</p>
+          <h2 class="text-lg sm:text-xl font-bold cursor-pointer select-none leading-snug" onclick="secretAdminTrigger()">Selamat Datang, Arifin!</h2>
+          <p class="text-xs sm:text-sm text-slate-300 mt-1">Pilih dan kelola catatan prinsip atau rumus penting Anda.</p>
         </div>
         <div class="text-left md:text-right bg-white/10 md:bg-transparent px-4 py-2 md:p-0 rounded-xl w-full md:w-auto flex md:block items-center justify-between">
-          <span class="text-xs text-slate-300 md:text-slate-400 block">Total Catatan Aktif</span>
+          <span class="text-xs text-slate-300 md:text-slate-400 block">Total Catatan</span>
           <span id="statTotalNotes" class="text-xl sm:text-2xl font-bold text-blue-400">0</span>
         </div>
       </div>
 
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 items-start">
-        <section class="lg:col-span-4 bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4 lg:sticky lg:top-6">
-          <h2 class="text-sm sm:text-base font-bold text-slate-900 flex items-center gap-2">
-            <span>📌</span> Buat Catatan Baru
-          </h2>
-          <form id="noteForm" onsubmit="handleNoteSubmit(event)" class="space-y-3.5">
-            <div>
-              <label class="block text-xs font-semibold text-slate-600 mb-1">Nama Catatan</label>
-              <input type="text" id="noteTitle" dir="auto" required placeholder="Contoh: Rumus / Prinsip" class="w-full border border-slate-200 rounded-xl p-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+        <!-- Kolom Kiri: Form & Daftar Pilihan Catatan -->
+        <section class="lg:col-span-5 space-y-4">
+          <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+            <h3 class="text-sm sm:text-base font-bold text-slate-900 flex items-center gap-2">
+              <span>📌</span> Buat Catatan Baru
+            </h3>
+            <form id="noteForm" onsubmit="handleNoteSubmit(event)" class="space-y-3">
+              <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Nama / Judul Catatan</label>
+                <input type="text" id="noteTitle" dir="auto" required placeholder="Contoh: Rumus Fisika / Prinsip" class="w-full border border-slate-200 rounded-xl p-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Isi Catatan</label>
+                <textarea id="noteContent" dir="auto" rows="3" required placeholder="Tulis detail catatan..." class="w-full border border-slate-200 rounded-xl p-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 resize-none"></textarea>
+              </div>
+              <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-xl text-sm transition cursor-pointer shadow-sm">
+                + Simpan Catatan
+              </button>
+            </form>
+          </div>
+
+          <!-- Pilihan Daftar Catatan -->
+          <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+            <h3 class="text-sm font-bold text-slate-900">📂 Pilih Catatan Anda</h3>
+            <div id="notesListContainer" class="space-y-2 max-h-64 overflow-y-auto no-scrollbar">
+              <!-- Item pilihan catatan dirender dinamis -->
             </div>
-            <div>
-              <label class="block text-xs font-semibold text-slate-600 mb-1">Isi Catatan</label>
-              <textarea id="noteContent" dir="auto" rows="4" required placeholder="Tulis detail catatan..." class="w-full border border-slate-200 rounded-xl p-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 resize-none"></textarea>
-            </div>
-            <button type="submit" id="btnSubmitNote" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-xl text-sm transition cursor-pointer shadow-sm">
-              + Simpan Catatan
-            </button>
-          </form>
+          </div>
         </section>
 
-        <section class="lg:col-span-8 space-y-3 sm:space-y-4">
-          <h2 class="text-sm sm:text-base font-bold text-slate-900 flex items-center gap-2">
-            <span>📝</span> Catatan Permanen Dashboard
-          </h2>
-          <div id="notesContainer" class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4"></div>
+        <!-- Kolom Kanan: Tampilan Detail Catatan yang Dipilih -->
+        <section class="lg:col-span-7 bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+          <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+            <h3 class="text-sm sm:text-base font-bold text-slate-900">📖 Detail Catatan</h3>
+            <div id="selectedNoteActions"></div>
+          </div>
+          <div id="activeNoteDetailContainer" class="min-h-[220px] flex flex-col justify-center">
+            <p class="text-xs text-slate-400 text-center">Pilih salah satu catatan di samping untuk melihat isinya.</p>
+          </div>
         </section>
       </div>
     </div>
@@ -96,19 +107,19 @@
         <div class="flex items-center justify-between sm:justify-start gap-2 bg-white px-3 py-2 rounded-xl border border-slate-200 shadow-xs">
           <span class="text-xs font-semibold text-slate-500">📅 Tanggal:</span>
           <input type="date" id="selectedActivityDate" onchange="onDateChanged()" class="text-xs font-bold text-slate-800 outline-none cursor-pointer bg-transparent">
-          <span id="selectedDayBadge" class="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md"></span>
         </div>
       </div>
+      <div id="selectedDayBadge" class="text-xs font-bold text-blue-600 bg-blue-50 px-3 py-2 rounded-xl text-center"></div>
 
       <div id="subContainerKegiatan" class="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 items-start">
-        <section class="lg:col-span-4 bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4 lg:sticky lg:top-6">
+        <section class="lg:col-span-4 bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
           <h2 class="text-sm sm:text-base font-bold text-slate-900">✍️ Tambah Kegiatan Rutin</h2>
           <form id="activityForm" onsubmit="handleActivitySubmit(event)" class="space-y-3.5">
             <div>
               <label class="block text-xs font-semibold text-slate-600 mb-1">Nama Kegiatan</label>
               <input type="text" id="actName" dir="auto" required placeholder="Contoh: Membaca Al-Qur'an" class="w-full border border-slate-200 rounded-xl p-2.5 text-sm outline-none">
             </div>
-            <button type="submit" id="btnSubmitActivity" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-xl text-sm transition cursor-pointer shadow-sm">
+            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-xl text-sm transition cursor-pointer shadow-sm">
               + Simpan Kegiatan
             </button>
           </form>
@@ -128,18 +139,16 @@
 
     <!-- ================= TAB 3: TARGET & SASARAN ================= -->
     <div id="tabTarget" class="space-y-4 sm:space-y-6 hidden">
-      <!-- Sub Navbar Target + Riwayat Target -->
       <div class="flex items-center gap-2 border-b border-slate-200 pb-3 overflow-x-auto no-scrollbar">
-        <button onclick="switchSubTarget('Usaha')" id="targetSubUsaha" class="px-3.5 sm:px-4 py-2 rounded-xl text-xs font-bold bg-emerald-600 text-white cursor-pointer transition whitespace-nowrap shrink-0">💼 Usaha</button>
-        <button onclick="switchSubTarget('Kebutuhan')" id="targetSubKebutuhan" class="px-3.5 sm:px-4 py-2 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 cursor-pointer transition whitespace-nowrap shrink-0">🛒 Kebutuhan</button>
-        <button onclick="switchSubTarget('Kewajiban')" id="targetSubKewajiban" class="px-3.5 sm:px-4 py-2 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 cursor-pointer transition whitespace-nowrap shrink-0">📌 Kewajiban</button>
-        <button onclick="switchSubTarget('Skripsi')" id="targetSubSkripsi" class="px-3.5 sm:px-4 py-2 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 cursor-pointer transition whitespace-nowrap shrink-0">🎓 Skripsi</button>
-        <button onclick="switchSubTarget('Riwayat')" id="targetSubRiwayat" class="px-3.5 sm:px-4 py-2 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 cursor-pointer transition whitespace-nowrap shrink-0">📁 Riwayat Target</button>
+        <button onclick="switchSubTarget('Usaha')" id="targetSubUsaha" class="px-3 py-2 rounded-xl text-xs font-bold bg-emerald-600 text-white cursor-pointer transition whitespace-nowrap shrink-0">💼 Usaha</button>
+        <button onclick="switchSubTarget('Kebutuhan')" id="targetSubKebutuhan" class="px-3 py-2 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 cursor-pointer transition whitespace-nowrap shrink-0">🛒 Kebutuhan</button>
+        <button onclick="switchSubTarget('Kewajiban')" id="targetSubKewajiban" class="px-3 py-2 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 cursor-pointer transition whitespace-nowrap shrink-0">📌 Kewajiban</button>
+        <button onclick="switchSubTarget('Skripsi')" id="targetSubSkripsi" class="px-3 py-2 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 cursor-pointer transition whitespace-nowrap shrink-0">🎓 Skripsi</button>
+        <button onclick="switchSubTarget('Riwayat')" id="targetSubRiwayat" class="px-3 py-2 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 cursor-pointer transition whitespace-nowrap shrink-0">📁 Riwayat Target</button>
       </div>
 
-      <!-- Tampilan Input & Daftar Target Aktif -->
       <div id="targetActiveSection" class="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 items-start">
-        <section class="lg:col-span-4 bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4 lg:sticky lg:top-6">
+        <section class="lg:col-span-4 bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
           <h2 id="targetFormTitle" class="text-sm sm:text-base font-bold text-slate-900">🎯 Tambah Target Usaha</h2>
           <form id="targetForm" onsubmit="handleTargetSubmit(event)" class="space-y-3.5">
             <input type="hidden" id="targetCategoryInput" value="Usaha">
@@ -151,7 +160,7 @@
               <label class="block text-xs font-semibold text-slate-600 mb-1">Waktu Tenggat (Deadline)</label>
               <input type="date" id="targetDeadline" required class="w-full border border-slate-200 rounded-xl p-2.5 text-sm outline-none">
             </div>
-            <button type="submit" id="btnSubmitTarget" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 rounded-xl text-sm transition cursor-pointer shadow-sm">
+            <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 rounded-xl text-sm transition cursor-pointer shadow-sm">
               + Simpan Target
             </button>
           </form>
@@ -166,7 +175,6 @@
         </section>
       </div>
 
-      <!-- Tampilan Riwayat Target Selesai (Grid Berdasarkan Bulan) -->
       <div id="targetHistorySection" class="space-y-6 hidden">
         <div class="flex items-center justify-between border-b border-slate-200 pb-3">
           <h2 class="text-sm sm:text-base font-bold text-slate-900">📁 Arsip Riwayat Seluruh Target Selesai</h2>
@@ -178,7 +186,23 @@
 
   </div>
 
-  <!-- Modal Login Admin -->
+  <!-- BOTTOM NAVIGATION BAR (Mobile App Style) -->
+  <nav class="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200 px-4 py-2.5 flex items-center justify-around z-40 shadow-lg md:hidden">
+    <button onclick="switchMainTab('dashboard')" id="navBarDashboard" class="flex flex-col items-center gap-1 text-blue-600 transition cursor-pointer">
+      <span class="text-xl">🏠</span>
+      <span class="text-[10px] font-bold">Dashboard</span>
+    </button>
+    <button onclick="switchMainTab('aktivitas')" id="navBarAktivitas" class="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-600 transition cursor-pointer">
+      <span class="text-xl">📋</span>
+      <span class="text-[10px] font-semibold">Aktivitas</span>
+    </button>
+    <button onclick="switchMainTab('target')" id="navBarTarget" class="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-600 transition cursor-pointer">
+      <span class="text-xl">🎯</span>
+      <span class="text-[10px] font-semibold">Target</span>
+    </button>
+  </nav>
+
+  <!-- MODAL LOGIN ADMIN -->
   <div id="loginModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 z-50 hidden">
     <div class="bg-white rounded-2xl max-w-sm w-11/12 p-5 sm:p-6 shadow-xl space-y-4">
       <div class="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -187,9 +211,7 @@
       </div>
       <p class="text-xs text-slate-500">Masukkan kode akses admin untuk membuka izin Tambah, Edit, dan Hapus.</p>
       <form onsubmit="verifyAdminPin(event)" class="space-y-3">
-        <div>
-          <input type="password" id="adminPinInput" required placeholder="Masukkan kode akses..." class="w-full border border-slate-200 rounded-xl p-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500">
-        </div>
+        <input type="password" id="adminPinInput" required placeholder="Masukkan kode akses..." class="w-full border border-slate-200 rounded-xl p-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500">
         <div class="flex gap-2 pt-2">
           <button type="button" onclick="closeLoginModal()" class="w-1/2 py-2.5 text-xs font-semibold text-slate-600 border border-slate-200 rounded-xl">Batal</button>
           <button type="submit" class="w-1/2 py-2.5 text-xs font-semibold text-white bg-blue-600 rounded-xl shadow-sm">Masuk</button>
@@ -198,7 +220,7 @@
     </div>
   </div>
 
-  <!-- Modal Edit Catatan -->
+  <!-- MODAL EDIT CATATAN -->
   <div id="editNoteModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 z-50 hidden">
     <div class="bg-white rounded-2xl max-w-md w-11/12 p-5 sm:p-6 shadow-xl space-y-4">
       <div class="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -223,7 +245,7 @@
     </div>
   </div>
 
-  <!-- Modal Edit Kegiatan -->
+  <!-- MODAL EDIT KEGIATAN -->
   <div id="editActivityModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 z-50 hidden">
     <div class="bg-white rounded-2xl max-w-md w-11/12 p-5 sm:p-6 shadow-xl space-y-4">
       <div class="flex items-center justify-between border-b border-slate-100 pb-3">
