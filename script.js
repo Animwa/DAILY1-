@@ -1,5 +1,5 @@
 /**
- * FRONTEND LOGIC - Diselaraskan dengan Backend GS Anda
+ * FRONTEND LOGIC - 1% Daily Habit & Activity Tracker
  */
 
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwxuC3hpMkGKuXF7s-_GNu2azKPFABghIWRwj8BWlhk8p-062wH0hCL0W3zmNAfrX0QJQ/exec"; 
@@ -114,7 +114,11 @@ async function verifyAdminPin(e) {
 
 function toggleAdminMode(status) {
   isAdmin = status;
-  document.getElementById('adminBadge').classList.toggle('hidden', !isAdmin);
+  let badgeDesktop = document.getElementById('adminBadge');
+  let badgeMobile = document.getElementById('adminBadgeMobile');
+  if (badgeDesktop) badgeDesktop.classList.toggle('hidden', !isAdmin);
+  if (badgeMobile) badgeMobile.classList.toggle('hidden', !isAdmin);
+
   renderNotes();
   renderActivities();
   renderTargets();
@@ -148,17 +152,29 @@ function renderAll() {
   renderTargets();
 }
 
-// --- NAVIGASI UTAMA & BOTTOM BAR ---
+// --- NAVIGASI UTAMA (Sinkron Desktop & Mobile) ---
 function switchMainTab(tab) {
   ['dashboard', 'aktivitas', 'target'].forEach(t => {
+    // Tampilkan / Sembunyikan Konten Tab
     document.getElementById('tab' + capitalize(t)).classList.toggle('hidden', t !== tab);
     
-    let navBarBtn = document.getElementById('navBar' + capitalize(t));
-    if (navBarBtn) {
+    // Sinkron Tombol Atas (Desktop)
+    let topBtn = document.getElementById('navMain' + capitalize(t));
+    if (topBtn) {
       if (t === tab) {
-        navBarBtn.className = "flex flex-col items-center gap-1 text-blue-600 transition cursor-pointer font-bold";
+        topBtn.className = "px-3.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer bg-blue-600 text-white shadow-xs whitespace-nowrap";
       } else {
-        navBarBtn.className = "flex flex-col items-center gap-1 text-slate-400 hover:text-slate-600 transition cursor-pointer font-semibold";
+        topBtn.className = "px-3.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer bg-slate-100 text-slate-600 hover:bg-slate-200 whitespace-nowrap";
+      }
+    }
+
+    // Sinkron Bottom Nav (Mobile)
+    let botBtn = document.getElementById('navBar' + capitalize(t));
+    if (botBtn) {
+      if (t === tab) {
+        botBtn.className = "flex flex-col items-center gap-1 text-blue-600 transition cursor-pointer font-bold";
+      } else {
+        botBtn.className = "flex flex-col items-center gap-1 text-slate-400 hover:text-slate-600 transition cursor-pointer font-semibold";
       }
     }
   });
@@ -415,7 +431,7 @@ function renderTargetHistory() {
   `).join('');
 }
 
-// --- FORM SUBMIT (DISESUAIKAN DENGAN GS ANDA) ---
+// --- FORM SUBMIT HANDLERS ---
 async function handleNoteSubmit(e) {
   e.preventDefault();
   if (!isAdmin) return alert("Akses ditolak. Masuk sebagai admin terlebih dahulu.");
