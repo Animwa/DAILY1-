@@ -1,5 +1,5 @@
 /**
- * FRONTEND LOGIC - 1% Daily Habit & Activity Tracker (Target History & Monthly Grid)
+ * FRONTEND LOGIC - 1% Daily Habit & Activity Tracker (Mobile App UI & Note Selector)
  */
 
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwxuC3hpMkGKuXF7s-_GNu2azKPFABghIWRwj8BWlhk8p-062wH0hCL0W3zmNAfrX0QJQ/exec"; 
@@ -9,6 +9,7 @@ let isAdmin = false;
 let currentTargetSub = "Usaha";
 let secretClickCount = 0;
 let currentSelectedDate = "";
+let selectedNoteId = null; // Menyimpan ID catatan yang sedang dipilih di Dashboard
 
 // Proteksi DevTools & Klik Kanan
 document.addEventListener('keydown', e => {
@@ -73,7 +74,7 @@ function formatMonthYear(dateString) {
 function updateDayBadge(dateStr) {
   let formatted = formatIndonesianDate(dateStr);
   let dayBadge = document.getElementById('selectedDayBadge');
-  if (dayBadge) dayBadge.innerText = formatted;
+  if (dayBadge) dayBadge.innerText = "📅 " + formatted;
 }
 
 function secretAdminTrigger() {
@@ -131,6 +132,10 @@ async function fetchAllData() {
     let json = await res.json();
     if (json.status === "success") {
       appData = json.data;
+      // Otomatis pilih catatan pertama jika belum ada yang terpilih
+      if (appData.notes.length > 0 && (!selectedNoteId || !appData.notes.some(n => n.id === selectedNoteId))) {
+        selectedNoteId = appData.notes[0].id;
+      }
       renderAll();
     }
   } catch (err) {
@@ -146,15 +151,19 @@ function renderAll() {
   renderTargets();
 }
 
-// --- NAVIGASI UTAMA ---
+// --- NAVIGASI UTAMA & BOTTOM NAV BAR ---
 function switchMainTab(tab) {
   ['dashboard', 'aktivitas', 'target'].forEach(t => {
     document.getElementById('tab' + capitalize(t)).classList.toggle('hidden', t !== tab);
-    let btn = document.getElementById('navMain' + capitalize(t));
-    if (t === tab) {
-      btn.className = "px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition cursor-pointer bg-blue-600 text-white shadow-xs whitespace-nowrap shrink-0";
-    } else {
-      btn.className = "px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition cursor-pointer bg-slate-100 text-slate-600 hover:bg-slate-200 whitespace-nowrap shrink-0";
+    
+    // Update style Bottom Nav Bar
+    let navBarBtn = document.getElementById('navBar' + capitalize(t));
+    if (navBarBtn) {
+      if (t === tab) {
+        navBarBtn.className = "flex flex-col items-center gap-1 text-blue-600 transition cursor-pointer font-bold";
+      } else {
+        navBarBtn.className = "flex flex-col items-center gap-1 text-slate-400 hover:text-slate-600 transition cursor-pointer font-semibold";
+      }
     }
   });
 }
@@ -170,7 +179,7 @@ function switchSubAktivitas(sub) {
   if (sub === 'riwayat') renderDailyGrid();
 }
 
-// --- SUB NAVIGASI TARGET & RIWAYAT TARGET ---
+// --- SUB NAVIGASI TARGET ---
 function switchSubTarget(cat) {
   currentTargetSub = cat;
   const categories = ['Usaha', 'Kebutuhan', 'Kewajiban', 'Skripsi', 'Riwayat'];
@@ -178,7 +187,7 @@ function switchSubTarget(cat) {
   categories.forEach(c => {
     let btn = document.getElementById('targetSub' + c);
     if (btn) {
-      btn.className = c === cat ? "px-3.5 sm:px-4 py-2 rounded-xl text-xs font-bold bg-emerald-600 text-white cursor-pointer transition whitespace-nowrap shrink-0" : "px-3.5 sm:px-4 py-2 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 cursor-pointer transition whitespace-nowrap shrink-0";
+      btn.className = c === cat ? "px-3 py-2 rounded-xl text-xs font-bold bg-emerald-600 text-white cursor-pointer transition whitespace-nowrap shrink-0" : "px-3 py-2 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 cursor-pointer transition whitespace-nowrap shrink-0";
     }
   });
 
@@ -195,26 +204,63 @@ function switchSubTarget(cat) {
   renderTargets();
 }
 
-// --- RENDER NOTES ---
+// --- RENDER NOTES & NOTE SELECTOR ---
 function renderNotes() {
-  let container = document.getElementById('notesContainer');
+  let listContainer = document.getElementById('notesListContainer');
+  let detailContainer = document.getElementById('activeNoteDetailContainer');
+  let actionsContainer = document.getElementById('selectedNoteActions');
+
   document.getElementById('statTotalNotes').innerText = appData.notes.length;
+
   if (appData.notes.length === 0) {
-    container.innerHTML = `<p class="text-xs text-slate-400 col-span-2 text-center py-6">Belum ada catatan.</p>`;
+    listContainer.innerHTML = `<p class="text-xs text-slate-400 text-center py-4">Belum ada catatan.</p>`;
+    detailContainer.innerHTML = `<p class="text-xs text-slate-400 text-center">Belum ada catatan untuk ditampilkan.</p>`;
+    actionsContainer.innerHTML = "";
     return;
   }
-  container.innerHTML = appData.notes.map(n => `
-    <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-2 relative">
-      <h3 class="font-bold text-slate-900 text-sm">${escapeHtml(n.title)}</h3>
-      <p class="text-xs text-slate-600 whitespace-pre-wrap" dir="auto">${escapeHtml(n.content)}</p>
-      ${isAdmin ? `
-        <div class="flex gap-3 pt-2 border-t border-slate-100 mt-2">
-          <button onclick='openEditNoteModal(${JSON.stringify(n)})' class="text-xs text-blue-600 font-semibold cursor-pointer">Edit</button>
-          <button onclick="deleteNote('${n.id}')" class="text-xs text-red-600 font-semibold cursor-pointer">Hapus</button>
+
+  // Jika belum ada yang terpilih atau yang dipilih sudah dihapus, pilih yang pertama
+  if (!selectedNoteId || !appData.notes.some(n => n.id === selectedNoteId)) {
+    selectedNoteId = appData.notes[0].id;
+  }
+
+  // Render daftar pilihan judul catatan di sidebar/kolom kiri
+  listContainer.innerHTML = appData.notes.map(n => {
+    let isSelected = (n.id === selectedNoteId);
+    return `
+      <div onclick="selectNote('${n.id}')" class="p-3 rounded-xl border text-xs font-semibold cursor-pointer transition flex items-center justify-between ${isSelected ? 'bg-blue-50 border-blue-300 text-blue-900 shadow-xs' : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'}">
+        <span class="truncate pr-2" dir="auto">📌 ${escapeHtml(n.title)}</span>
+        <span class="text-[10px] text-slate-400">${isSelected ? 'Aktif' : ''}</span>
+      </div>
+    `;
+  }).join('');
+
+  // Cari catatan yang sedang aktif
+  let activeNote = appData.notes.find(n => n.id === selectedNoteId);
+  if (activeNote) {
+    detailContainer.innerHTML = `
+      <div class="space-y-3">
+        <h4 class="font-bold text-slate-900 text-base" dir="auto">${escapeHtml(activeNote.title)}</h4>
+        <div class="p-4 bg-slate-50 border border-slate-100 rounded-2xl text-xs sm:text-sm text-slate-700 whitespace-pre-wrap leading-relaxed" dir="auto">${escapeHtml(activeNote.content)}</div>
+      </div>
+    `;
+
+    if (isAdmin) {
+      actionsContainer.innerHTML = `
+        <div class="flex gap-2">
+          <button onclick='openEditNoteModal(${JSON.stringify(activeNote)})' class="px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-xl text-xs font-bold transition cursor-pointer">Edit</button>
+          <button onclick="deleteNote('${activeNote.id}')" class="px-3 py-1.5 bg-red-50 text-red-600 hover:bg-red-100 rounded-xl text-xs font-bold transition cursor-pointer">Hapus</button>
         </div>
-      ` : ''}
-    </div>
-  `).join('');
+      `;
+    } else {
+      actionsContainer.innerHTML = "";
+    }
+  }
+}
+
+function selectNote(id) {
+  selectedNoteId = id;
+  renderNotes();
 }
 
 // --- RENDER ACTIVITIES ---
@@ -297,7 +343,7 @@ function renderDailyGrid() {
   }).join('');
 }
 
-// --- RENDER TARGETS & RIWAYAT TARGET (PER BULAN & URUT TENGGAT) ---
+// --- RENDER TARGETS & RIWAYAT TARGET ---
 function renderTargets() {
   if (currentTargetSub === 'Riwayat') {
     renderTargetHistory();
@@ -305,7 +351,6 @@ function renderTargets() {
   }
 
   let container = document.getElementById('targetContainer');
-  // Hanya tampilkan target yang BELUM selesai di sub-kategori masing-masing
   let filtered = appData.targets.filter(t => t.category === currentTargetSub && t.status !== 'Selesai');
   document.getElementById('targetCountBadge').innerText = filtered.length;
 
@@ -333,7 +378,6 @@ function renderTargets() {
   }).join('');
 }
 
-// Render Riwayat Target (Dikelompokkan per Bulan & Urut Tenggat)
 function renderTargetHistory() {
   let container = document.getElementById('targetHistoryGridContainer');
   let completedTargets = appData.targets.filter(t => t.status === 'Selesai');
@@ -345,10 +389,8 @@ function renderTargetHistory() {
     return;
   }
 
-  // Urutkan berdasarkan tenggat (deadline) secara kronologis
   completedTargets.sort((a, b) => new Date(a.deadline) - new Date(b.deadline));
 
-  // Kelompokkan berdasarkan Bulan & Tahun
   let groupedByMonth = {};
   completedTargets.forEach(t => {
     let monthYear = formatMonthYear(t.deadline);
@@ -380,14 +422,14 @@ function renderTargetHistory() {
   `).join('');
 }
 
-// --- FORM SUBMIT HANDLERS ---
+// --- FORM SUBMIT & HANDLERS ---
 async function handleNoteSubmit(e) {
   e.preventDefault();
   if (!isAdmin) return alert("Akses ditolak. Masuk sebagai admin terlebih dahulu.");
   let payload = { action: "addNote", data: { title: document.getElementById('noteTitle').value, content: document.getElementById('noteContent').value } };
-  await sendPost(payload);
+  let res = await sendPost(payload);
   document.getElementById('noteForm').reset();
-  fetchAllData();
+  await fetchAllData();
 }
 
 async function handleActivitySubmit(e) {
@@ -421,7 +463,6 @@ async function handleTargetSubmit(e) {
   fetchAllData();
 }
 
-// --- USER ACTIONS ---
 async function completeActivityWithNotes(id) {
   let notesInput = document.getElementById('actNoteInput_' + id);
   let notesVal = notesInput ? notesInput.value : "";
@@ -440,7 +481,7 @@ async function toggleTargetStatus(id, status) {
   fetchAllData();
 }
 
-// --- ADMIN EDIT & DELETE MODALS ---
+// --- MODALS ADMIN & EDIT ---
 function openEditNoteModal(note) {
   document.getElementById('editNoteId').value = note.id;
   document.getElementById('editNoteTitle').value = note.title;
