@@ -1,5 +1,5 @@
 /**
- * FRONTEND LOGIC - 1% Daily Habit & Activity Tracker (Mobile App UI & Note Selector)
+ * FRONTEND LOGIC - Diselaraskan dengan Backend GS Anda
  */
 
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwxuC3hpMkGKuXF7s-_GNu2azKPFABghIWRwj8BWlhk8p-062wH0hCL0W3zmNAfrX0QJQ/exec"; 
@@ -9,7 +9,7 @@ let isAdmin = false;
 let currentTargetSub = "Usaha";
 let secretClickCount = 0;
 let currentSelectedDate = "";
-let selectedNoteId = null; // Menyimpan ID catatan yang sedang dipilih di Dashboard
+let selectedNoteId = null;
 
 // Proteksi DevTools & Klik Kanan
 document.addEventListener('keydown', e => {
@@ -20,7 +20,7 @@ document.addEventListener('keydown', e => {
   }
 });
 
-// Shortcut Keyboard Tersembunyi untuk Login Admin (Ctrl + Alt + M)
+// Shortcut Login Admin (Ctrl + Alt + M)
 document.addEventListener('keydown', e => {
   if (e.ctrlKey && e.altKey && e.key.toLowerCase() === 'm') {
     e.preventDefault();
@@ -57,7 +57,6 @@ function formatIndonesianDate(dateString) {
   if (!dateString) return "";
   let d = new Date(dateString);
   if (isNaN(d.getTime())) return dateString;
-  
   const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
   return d.toLocaleDateString('id-ID', options);
 }
@@ -66,7 +65,6 @@ function formatMonthYear(dateString) {
   if (!dateString) return "Lainnya";
   let d = new Date(dateString);
   if (isNaN(d.getTime())) return "Lainnya";
-  
   const options = { year: 'numeric', month: 'long' };
   return d.toLocaleDateString('id-ID', options);
 }
@@ -132,7 +130,6 @@ async function fetchAllData() {
     let json = await res.json();
     if (json.status === "success") {
       appData = json.data;
-      // Otomatis pilih catatan pertama jika belum ada yang terpilih
       if (appData.notes.length > 0 && (!selectedNoteId || !appData.notes.some(n => n.id === selectedNoteId))) {
         selectedNoteId = appData.notes[0].id;
       }
@@ -151,12 +148,11 @@ function renderAll() {
   renderTargets();
 }
 
-// --- NAVIGASI UTAMA & BOTTOM NAV BAR ---
+// --- NAVIGASI UTAMA & BOTTOM BAR ---
 function switchMainTab(tab) {
   ['dashboard', 'aktivitas', 'target'].forEach(t => {
     document.getElementById('tab' + capitalize(t)).classList.toggle('hidden', t !== tab);
     
-    // Update style Bottom Nav Bar
     let navBarBtn = document.getElementById('navBar' + capitalize(t));
     if (navBarBtn) {
       if (t === tab) {
@@ -204,7 +200,7 @@ function switchSubTarget(cat) {
   renderTargets();
 }
 
-// --- RENDER NOTES & NOTE SELECTOR ---
+// --- RENDER NOTES & SELECTOR ---
 function renderNotes() {
   let listContainer = document.getElementById('notesListContainer');
   let detailContainer = document.getElementById('activeNoteDetailContainer');
@@ -219,23 +215,20 @@ function renderNotes() {
     return;
   }
 
-  // Jika belum ada yang terpilih atau yang dipilih sudah dihapus, pilih yang pertama
   if (!selectedNoteId || !appData.notes.some(n => n.id === selectedNoteId)) {
     selectedNoteId = appData.notes[0].id;
   }
 
-  // Render daftar pilihan judul catatan di sidebar/kolom kiri
   listContainer.innerHTML = appData.notes.map(n => {
     let isSelected = (n.id === selectedNoteId);
     return `
       <div onclick="selectNote('${n.id}')" class="p-3 rounded-xl border text-xs font-semibold cursor-pointer transition flex items-center justify-between ${isSelected ? 'bg-blue-50 border-blue-300 text-blue-900 shadow-xs' : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'}">
         <span class="truncate pr-2" dir="auto">📌 ${escapeHtml(n.title)}</span>
-        <span class="text-[10px] text-slate-400">${isSelected ? 'Aktif' : ''}</span>
+        <span class="text-[10px] text-blue-600 font-bold">${isSelected ? 'Aktif' : ''}</span>
       </div>
     `;
   }).join('');
 
-  // Cari catatan yang sedang aktif
   let activeNote = appData.notes.find(n => n.id === selectedNoteId);
   if (activeNote) {
     detailContainer.innerHTML = `
@@ -304,7 +297,7 @@ function renderActivities() {
   }).join('');
 }
 
-// --- RENDER RIWAYAT HARIAN GRID ---
+// --- RENDER RIWAYAT GRID ---
 function renderDailyGrid() {
   let gridContainer = document.getElementById('dailyGridContainer');
   let completed = appData.activities.filter(a => a.status === "Selesai" && a.completedDate);
@@ -343,7 +336,7 @@ function renderDailyGrid() {
   }).join('');
 }
 
-// --- RENDER TARGETS & RIWAYAT TARGET ---
+// --- RENDER TARGETS ---
 function renderTargets() {
   if (currentTargetSub === 'Riwayat') {
     renderTargetHistory();
@@ -422,14 +415,20 @@ function renderTargetHistory() {
   `).join('');
 }
 
-// --- FORM SUBMIT & HANDLERS ---
+// --- FORM SUBMIT (DISESUAIKAN DENGAN GS ANDA) ---
 async function handleNoteSubmit(e) {
   e.preventDefault();
   if (!isAdmin) return alert("Akses ditolak. Masuk sebagai admin terlebih dahulu.");
-  let payload = { action: "addNote", data: { title: document.getElementById('noteTitle').value, content: document.getElementById('noteContent').value } };
-  let res = await sendPost(payload);
+  let payload = { 
+    action: "addNote", 
+    data: { 
+      title: document.getElementById('noteTitle').value, 
+      content: document.getElementById('noteContent').value 
+    } 
+  };
+  await sendPost(payload);
   document.getElementById('noteForm').reset();
-  await fetchAllData();
+  fetchAllData();
 }
 
 async function handleActivitySubmit(e) {
@@ -481,7 +480,7 @@ async function toggleTargetStatus(id, status) {
   fetchAllData();
 }
 
-// --- MODALS ADMIN & EDIT ---
+// --- MODAL & EDIT ACTIONS ---
 function openEditNoteModal(note) {
   document.getElementById('editNoteId').value = note.id;
   document.getElementById('editNoteTitle').value = note.title;
