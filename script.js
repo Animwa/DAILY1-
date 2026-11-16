@@ -1,5 +1,5 @@
 /**
- * FRONTEND LOGIC - 1% Daily Habit & Activity Tracker (Routine Template & Daily Logging)
+ * FRONTEND LOGIC - 1% Daily Habit & Activity Tracker (Optimized Routine Sync)
  */
 
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwxuC3hpMkGKuXF7s-_GNu2azKPFABghIWRwj8BWlhk8p-062wH0hCL0W3zmNAfrX0QJQ/exec"; 
@@ -50,7 +50,7 @@ function onDateChanged() {
   let dateInput = document.getElementById('selectedActivityDate');
   currentSelectedDate = dateInput.value;
   updateDayBadge(currentSelectedDate);
-  renderActivities();
+  ensureActivitiesForCurrentDate();
 }
 
 function formatIndonesianDate(dateString) {
@@ -122,7 +122,7 @@ function toggleAdminMode(status) {
   renderNotes();
   renderActivities();
   renderTargets();
-  alert(isAdmin ? "Mode Admin Aktif! Tombol Tambah & Hapus Kegiatan Terbuka." : "Mode Admin Dinonaktifkan.");
+  alert(isAdmin ? "Mode Admin Aktif! Tombol Tambah & Hapus Terbuka." : "Mode Admin Dinonaktifkan.");
 }
 
 async function fetchAllData() {
@@ -137,7 +137,7 @@ async function fetchAllData() {
       if (appData.notes.length > 0 && (!selectedNoteId || !appData.notes.some(n => n.id === selectedNoteId))) {
         selectedNoteId = appData.notes[0].id;
       }
-      renderAll();
+      await ensureActivitiesForCurrentDate();
     }
   } catch (err) {
     console.error("Gagal memuat data:", err);
@@ -150,6 +150,40 @@ function renderAll() {
   renderNotes();
   renderActivities();
   renderTargets();
+}
+
+// --- OTOMATIS MENYIAPKAN KEGIATAN RUTIN UNTUK TANGGAL AKTIF ---
+async function ensureActivitiesForCurrentDate() {
+  let allRoutineNames = [...new Set(appData.activities.map(a => a.activity))].filter(Boolean);
+  let existingForDate = appData.activities.filter(a => a.date === currentSelectedDate);
+  let existingNamesForDate = existingForDate.map(a => a.activity);
+  
+  let missingNames = allRoutineNames.filter(name => !existingNamesForDate.includes(name));
+  
+  if (missingNames.length > 0) {
+    for (let name of missingNames) {
+      await sendPost({
+        action: "addActivity",
+        data: {
+          date: currentSelectedDate,
+          activity: name
+        }
+      });
+    }
+    // Muat ulang data agar ID baris tanggal tersebut siap digunakan
+    try {
+      let res = await fetch(SCRIPT_URL + "?action=getAllData");
+      let json = await res.json();
+      if (json.status === "success") {
+        appData = json.data;
+      }
+    } catch (err) {
+      console.error("Error refreshing data:", err);
+    }
+  }
+  renderActivities();
+  renderTargets();
+  renderNotes();
 }
 
 // --- NAVIGASI UTAMA ---
@@ -261,89 +295,53 @@ function selectNote(id) {
   renderNotes();
 }
 
-// --- RENDER ACTIVITIES (ROUTINE TEMPLATE PER DAY) ---
+// --- RENDER ACTIVITIES (TAMPILKAN ROUTINE BERDASARKAN TANGGAL AKTIF) ---
 function renderActivities() {
   let todoContainer = document.getElementById('todoActivitiesContainer');
-  
-  // Ambil daftar unik nama kegiatan rutin yang dibuat admin
-  let routineNames = [...new Set(appData.activities.map(a => a.activity))].filter(Boolean);
+  let currentActivities = appData.activities.filter(a => a.date === currentSelectedDate);
 
-  if (routineNames.length === 0) {
+  if (currentActivities.length === 0) {
     todoContainer.innerHTML = `<p class="text-xs text-slate-400 text-center py-6">Belum ada kegiatan rutin. (Admin dapat menambahkan kegiatan di bawah)</p>`;
     return;
   }
 
-  todoContainer.innerHTML = routineNames.map(name => {
-    // Cari record untuk kegiatan ini pada tanggal yang sedang dipilih (currentSelectedDate)
-    let record = appData.activities.find(a => a.activity === name && a.date === currentSelectedDate);
-    let status = record ? record.status : "Belum";
-    let notes = record ? (record.notes || "") : "";
-    let recordId = record ? record.id : "";
+  todoContainer.innerHTML = currentActivities.map(a => {
+    let status = a.status || "Belum";
+    let notes = a.notes || "";
 
     return `
       <div class="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl space-y-2.5">
         <div class="flex items-center justify-between gap-2 flex-wrap">
-          <h4 class="font-bold text-sm text-slate-800" dir="auto">⚡ ${escapeHtml(name)}</h4>
+          <h4 class="font-bold text-sm text-slate-800" dir="auto">⚡ ${escapeHtml(a.activity)}</h4>
           <div class="flex items-center gap-2">
-            <button onclick="handleRoutineAction('${escapeHtml(name)}', '${recordId}')" class="px-3.5 py-1.5 ${status === 'Selesai' ? 'bg-amber-500 hover:bg-amber-600' : 'bg-emerald-600 hover:bg-emerald-700'} text-white rounded-xl text-xs font-semibold cursor-pointer transition">
+            <button onclick="completeRoutineItem('${a.id}')" class="px-3.5 py-1.5 ${status === 'Selesai' ? 'bg-amber-500 hover:bg-amber-600' : 'bg-emerald-600 hover:bg-emerald-700'} text-white rounded-xl text-xs font-semibold cursor-pointer transition">
               ${status === 'Selesai' ? 'Batalkan' : 'Tandai Selesai'}
             </button>
             ${isAdmin ? `
               <div class="flex items-center gap-1.5 border-l border-slate-200 pl-2">
-                <button onclick="deleteRoutineByName('${escapeHtml(name)}')" class="text-xs text-red-500 font-semibold cursor-pointer">Hapus Master</button>
+                <button onclick="deleteActivity('${a.id}')" class="text-xs text-red-500 font-semibold cursor-pointer">Hapus</button>
               </div>
             ` : ''}
           </div>
         </div>
         <div>
-          <input type="text" id="routineNoteInput_${escapeHtml(name)}" dir="auto" value="${escapeHtml(notes)}" placeholder="Isi catatan harian (contoh: 10 kali)..." class="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs bg-white outline-none focus:ring-1 focus:ring-blue-500">
+          <input type="text" id="routineNoteInput_${a.id}" dir="auto" value="${escapeHtml(notes)}" placeholder="Isi catatan harian (contoh: 10 kali)..." class="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs bg-white outline-none focus:ring-1 focus:ring-blue-500">
         </div>
       </div>
     `;
   }).join('');
 }
 
-// Aksi Tandai Selesai / Batalkan per Hari untuk Kegiatan Rutin
-async function handleRoutineAction(activityName, recordId) {
-  let noteInput = document.getElementById('routineNoteInput_' + activityName);
+async function completeRoutineItem(id) {
+  let noteInput = document.getElementById('routineNoteInput_' + id);
   let notesVal = noteInput ? noteInput.value : "";
-
-  if (!recordId) {
-    // Jika record untuk tanggal ini belum ada, buat baris baru untuk tanggal tersebut
-    let addRes = await sendPost({
-      action: "addActivity",
-      data: {
-        date: currentSelectedDate,
-        activity: activityName
-      }
-    });
-
-    if (addRes) {
-      // Ambil ulang data terbaru untuk mendapatkan ID record tanggal tersebut
-      let res = await fetch(SCRIPT_URL + "?action=getAllData");
-      let json = await res.json();
-      if (json.status === "success") {
-        appData = json.data;
-        let newRecord = appData.activities.find(a => a.activity === activityName && a.date === currentSelectedDate);
-        if (newRecord) {
-          await sendPost({
-            action: "completeActivity",
-            id: newRecord.id,
-            notes: notesVal,
-            selectedDate: currentSelectedDate
-          });
-        }
-      }
-    }
-  } else {
-    // Jika record sudah ada, update status & catatan di tanggal tersebut
-    await sendPost({
-      action: "completeActivity",
-      id: recordId,
-      notes: notesVal,
-      selectedDate: currentSelectedDate
-    });
-  }
+  
+  await sendPost({ 
+    action: "completeActivity", 
+    id: id, 
+    notes: notesVal, 
+    selectedDate: currentSelectedDate 
+  });
   fetchAllData();
 }
 
@@ -551,12 +549,9 @@ async function deleteNote(id) {
   }
 }
 
-async function deleteRoutineByName(activityName) {
-  if (confirm(`Hapus kegiatan "${activityName}" beserta seluruh riwayatnya?`)) {
-    let matching = appData.activities.filter(a => a.activity === activityName);
-    for (let item of matching) {
-      await sendPost({ action: "deleteActivity", id: item.id });
-    }
+async function deleteActivity(id) {
+  if (confirm("Hapus kegiatan ini?")) {
+    await sendPost({ action: "deleteActivity", id: id });
     fetchAllData();
   }
 }
